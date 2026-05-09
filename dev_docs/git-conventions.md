@@ -33,10 +33,10 @@
 
 ### 1.3 Subject（必填）
 
-- 使用祈使句，首字母小写
+- 使用祈使句
 - 不加句号
 - 不超过 72 个字符
-- 中文或英文均可，一个项目内保持统一
+- 用中文
 
 ### 1.4 Body（选填）
 
@@ -51,29 +51,28 @@
 ### 1.6 示例
 
 ```
-feat(agent): add multi-turn conversation support
+feat(agent): 添加多轮对话支持
 
 Closes #42
 ```
 
 ```
-fix(callbacks): resolve callback not triggering on reconnect
+fix(callbacks): 修复重连时回调未触发的 bug
 
-Race condition caused callbacks to be dropped when ZMQ socket
-reconnected. Added callback queue and flush logic.
+ZMQ socket 重连时的竞态条件导致回调被丢弃。添加了回调队列和刷新逻辑。
 
 Refs #58
 ```
 
 ```
-chore: migrate from setup.py to pyproject.toml
+chore: 从 setup.py 迁移到 pyproject.toml
 ```
 
 ```
-refactor(config)!: redesign config loading with pydantic
+refactor(config)!: 使用 pydantic 重新设计配置加载
 
-BREAKING CHANGE: Config is now loaded via ConfigurationManager
-instead of direct dict access.
+BREAKING CHANGE: Config 现在通过 ConfigurationManager 加载，
+而非直接字典访问。
 ```
 
 ---
