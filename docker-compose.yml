@@ -1,0 +1,13 @@
+services:
+  sonettohere:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api/data:/app/api/data
+      - ./config/personas:/app/config/personas
+      - ./.env:/app/.env:ro
+      - ./api/data/auth_token.yaml:/app/api/data/auth_token.yaml:ro
+    environment:
+      - SONETTO_ENV=production
+    restart: unless-stopped

@@ -27,3 +27,16 @@
 - **原因:** 添加 ruff 代码检查配置和 pytest 异步测试配置，设置统一的 lint 规则和测试发现路径
 - **决策:** 按任务 1.1.1 要求追加 ruff 配置段和 pytest 配置段到 pyproject.toml 末尾
 - **影响范围:** 项目构建配置
+
+## 2026-06-27: [2.2.1] feat: Docker 多阶段构建支持
+- **文件:**
+  - `Dockerfile`
+  - `.dockerignore`
+  - `docker-compose.yml`
+  - `main.py`
+- **原因:** Task 2.2.1 — 为项目创建 Docker 多阶段构建支持，便于容器化部署
+- **决策:**
+  - 双阶段构建：node:20-alpine 构建前端，python:3.11-slim 运行后端
+  - 修改 main.py 的 host 为 0.0.0.0（生产环境），解决 Docker 容器内绑定 127.0.0.1 无法外部访问的问题
+  - 数据持久化使用 Docker volumes 挂载 api/data 和 config/personas
+- **影响范围:** 项目根目录（Dockerfile、.dockerignore、docker-compose.yml）、主入口（main.py host 绑定逻辑）
