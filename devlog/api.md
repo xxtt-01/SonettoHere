@@ -1,3 +1,10 @@
+## 2026-06-27: 默认启用 SQLite 会话存储模式
+- **文件:**
+  - `api/server.py`
+- **原因:** Task 2.1.3 — 将生产环境 SessionManager 默认模式从 memory 切换为 sqlite，实现会话持久化
+- **决策:** 仅修改 server.py 传入 `mode="sqlite"`，不修改 SessionManager 默认值以保持测试不受影响
+- **影响范围:** api/server.py
+
 ## 2026-06-27: DatabaseSessionStore + SessionManager 双模式支持
 - **文件:**
   - `api/database/session_store.py` (new)

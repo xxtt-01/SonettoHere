@@ -115,7 +115,7 @@ async def lifespan(app: FastAPI):
         app.state.llm = None
     app.state.system_prompt = get_system_prompt()
     app.state.native_tools = get_tools()
-    app.state.session_manager = SessionManager()
+    app.state.session_manager = SessionManager(mode="sqlite")
     app.state.ws_registry = WebSocketRegistry()
     app.state.ltm = LongTermMemoryInterface(MEMORY_PATH)
     if app.state.llm is not None:
