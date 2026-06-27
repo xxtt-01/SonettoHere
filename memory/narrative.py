@@ -222,7 +222,7 @@ def delete_memory(id: str, reason: str) -> str:
         removed = _current_mm.delete(id)
     except ValueError:
         return f"错误：未找到 ID 为 {id} 的记忆条目。请先调用 read_memories 确认 ID。"
-    return f"已删除 [{id}]: {removed}"
+    return f"已删除 [{id}]: {removed}（原因：{reason}）"
 
 
 @tool
