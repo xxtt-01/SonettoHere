@@ -67,13 +67,13 @@ def mock_section():
 @pytest.fixture
 def mock_label():
     """Standard mock Label object."""
-    l = MagicMock()
-    l.id = "lab456"
-    l.name = "urgent"
-    l.color = "red"
-    l.order = 1
-    l.is_favorite = False
-    return l
+    label = MagicMock()
+    label.id = "lab456"
+    label.name = "urgent"
+    label.color = "red"
+    label.order = 1
+    label.is_favorite = False
+    return label
 
 
 @pytest.fixture

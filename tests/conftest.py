@@ -1,7 +1,8 @@
-"""共享 fixtures — FastAPI TestClient、认证 Token、最小测试 app。"""
+"""共享 fixtures — FastAPI TestClient、认证 Token、完整 app 工厂。"""
 
 import pytest
 from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 from starlette.testclient import TestClient
 
 from api.middleware.auth import AuthMiddleware
@@ -15,15 +16,7 @@ def auth_token() -> str:
 
 @pytest.fixture
 def minimal_app(auth_token: str) -> FastAPI:
-    """创建一个最小化的 FastAPI app 用于测试 AuthMiddleware。
-
-    包含：
-    - 一个受保护的 /api/test 路由
-    - 一个白名单 /api/health 路由
-    - 一个不受保护的 /open 路由
-    - 一个 /ws/test 路由（WebSocket 路径受保护）
-    - AuthMiddleware
-    """
+    """最小化 FastAPI app 用于测试 AuthMiddleware。"""
     app = FastAPI()
 
     @app.get("/api/test")
@@ -51,3 +44,46 @@ def minimal_app(auth_token: str) -> FastAPI:
 def client(minimal_app: FastAPI) -> TestClient:
     """Starlette TestClient 实例。"""
     return TestClient(minimal_app)
+
+
+@pytest.fixture
+def full_app() -> FastAPI:
+    """完整应用实例，Mock 所有外部依赖，不触发 lifespan。"""
+    from unittest.mock import MagicMock
+
+    from api.session_manager import SessionManager
+
+    app = FastAPI()
+
+    # Mock all app state
+    app.state.session_manager = SessionManager()
+    app.state.llm = None
+    app.state.provider_manager = MagicMock()
+    app.state.provider_manager.count = 0
+    app.state.system_prompt = "Test system prompt"
+    app.state.native_tools = []
+    app.state.mcp_tools = []
+    app.state.tools = []
+    app.state.ws_registry = MagicMock()
+    app.state.ltm = MagicMock()
+    app.state.auth_token = "test-token"
+
+    # Mount core routes
+    from api.routes.sessions import router as sessions_router
+
+    app.include_router(sessions_router, prefix="/api")
+
+    # Health check
+    @app.get("/api/health")
+    async def health():
+        return {"status": "ok", "version": "test"}
+
+    return app
+
+
+@pytest.fixture
+async def async_client(full_app: FastAPI) -> AsyncClient:
+    """异步 HTTP 客户端（不触发 lifespan）。"""
+    transport = ASGITransport(app=full_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client

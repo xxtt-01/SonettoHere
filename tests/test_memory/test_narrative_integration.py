@@ -174,7 +174,7 @@ async def test_send_history_is_non_blocking(tmp_path, monkeypatch):
 
     fake_agent = MagicMock()
     fake_agent.ainvoke = AsyncMock(side_effect=slow_ainvoke)
-    monkeypatch.setattr(narrative, "create_react_agent", lambda **kw: fake_agent)
+    monkeypatch.setattr(narrative, "create_react_agent", lambda **_kw: fake_agent)
 
     ltm = LongTermMemoryInterface(path)
     ltm.start_listening(MagicMock())

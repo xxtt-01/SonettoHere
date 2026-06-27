@@ -3,8 +3,8 @@
 from unittest.mock import MagicMock, PropertyMock
 
 from tools.todo.tool_complete import TodoCompleteTool
-from tools.todo.tool_uncomplete import TodoUncompleteTool
 from tools.todo.tool_delete import TodoDeleteTool
+from tools.todo.tool_uncomplete import TodoUncompleteTool
 
 
 class _BaseTest:

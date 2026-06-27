@@ -35,6 +35,7 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "pytest-mock>=3.12.0",
     "ruff>=0.11.0",
+    "asgi-lifespan>=2.0.0",
 ]
 
 [tool.setuptools.dynamic]
@@ -43,3 +44,18 @@ version = {attr = "version.__version__"}
 [build-system]
 requires = ["setuptools>=81.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "ARG", "PTH", "PD", "RUF100"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG001", "ARG002", "S101"]
+"__init__.py" = ["F401"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
