@@ -55,7 +55,7 @@ def estimate_context_usage(
         sys_total = count_tokens(system_prompt)
 
     # ── 对话消息细分 ──
-    MSG_LABELS = {"human": "用户输入", "ai": "回复", "tool": "工具"}
+    msg_labels = {"human": "用户输入", "ai": "回复", "tool": "工具"}
     msg_buckets: dict[str, int] = {"human": 0, "ai": 0, "tool": 0}
     msg_counts: dict[str, int] = {"human": 0, "ai": 0, "tool": 0}
     total = sys_total  # 从 system prompt 开始累加
@@ -92,7 +92,7 @@ def estimate_context_usage(
     # 仅在提供了 parts 时附带 breakdown
     if system_prompt_parts:
         msg_parts = [
-            {"key": k, "label": MSG_LABELS[k], "tokens": msg_buckets[k], "count": msg_counts[k]}
+            {"key": k, "label": msg_labels[k], "tokens": msg_buckets[k], "count": msg_counts[k]}
             for k in ("human", "ai", "tool")
             if msg_buckets[k] > 0
         ]

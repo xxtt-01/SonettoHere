@@ -11,7 +11,6 @@ import memory.narrative as narrative
 from memory.memory_manager import MemoryManager
 from memory.narrative import LongTermMemoryInterface
 
-
 # ── 测试辅助 ──────────────────────────────────────────────────
 
 
@@ -368,7 +367,7 @@ class TestLongTermMemoryInterface:
         path = tmp_path / "memory.yaml"
 
         fake_agent = _fake_agent_factory()
-        monkeypatch.setattr(narrative, "create_react_agent", lambda **kw: fake_agent)
+        monkeypatch.setattr(narrative, "create_react_agent", lambda **_kw: fake_agent)
 
         ltm = LongTermMemoryInterface(path)
         ltm.start_listening(MagicMock())
@@ -386,7 +385,7 @@ class TestLongTermMemoryInterface:
         path = tmp_path / "memory.yaml"
 
         fake_agent = _fake_agent_factory()
-        monkeypatch.setattr(narrative, "create_react_agent", lambda **kw: fake_agent)
+        monkeypatch.setattr(narrative, "create_react_agent", lambda **_kw: fake_agent)
 
         ltm = LongTermMemoryInterface(path)
         ltm.start_listening(MagicMock())
@@ -406,7 +405,7 @@ class TestLongTermMemoryInterface:
             narrative._current_mm.add(description="Miso 是一名学生。", theme="身份")
 
         fake_agent = _fake_agent_factory(entries_setup=agent_populates_entries)
-        monkeypatch.setattr(narrative, "create_react_agent", lambda **kw: fake_agent)
+        monkeypatch.setattr(narrative, "create_react_agent", lambda **_kw: fake_agent)
 
         ltm = LongTermMemoryInterface(path)
         ltm.start_listening(MagicMock())
@@ -524,7 +523,7 @@ class TestLongTermMemoryInterface:
 
         fake_agent = MagicMock()
         fake_agent.ainvoke = AsyncMock(side_effect=failing_ainvoke)
-        monkeypatch.setattr(narrative, "create_react_agent", lambda **kw: fake_agent)
+        monkeypatch.setattr(narrative, "create_react_agent", lambda **_kw: fake_agent)
 
         ltm = LongTermMemoryInterface(path)
         ltm.start_listening(MagicMock())
@@ -545,7 +544,7 @@ class TestLongTermMemoryInterface:
         path = tmp_path / "memory.yaml"
 
         fake_agent = _fake_agent_factory()
-        monkeypatch.setattr(narrative, "create_react_agent", lambda **kw: fake_agent)
+        monkeypatch.setattr(narrative, "create_react_agent", lambda **_kw: fake_agent)
 
         ltm = LongTermMemoryInterface(path)
         ltm.start_listening(MagicMock())
@@ -564,7 +563,7 @@ class TestLongTermMemoryInterface:
         _populate_mm(path, [("原始记忆。", "身份")])
 
         fake_agent = _fake_agent_factory()
-        monkeypatch.setattr(narrative, "create_react_agent", lambda **kw: fake_agent)
+        monkeypatch.setattr(narrative, "create_react_agent", lambda **_kw: fake_agent)
 
         ltm = LongTermMemoryInterface(path)
         ltm.start_listening(MagicMock())
@@ -585,7 +584,7 @@ class TestLongTermMemoryInterface:
                 description="记忆。", theme="身份"
             )
         )
-        monkeypatch.setattr(narrative, "create_react_agent", lambda **kw: fake_agent)
+        monkeypatch.setattr(narrative, "create_react_agent", lambda **_kw: fake_agent)
 
         ltm = LongTermMemoryInterface(path)
         ltm.start_listening(MagicMock())

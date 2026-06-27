@@ -33,7 +33,7 @@ class WhitelistResponse(BaseModel):
 def _load() -> list[dict]:
     if not WHITELIST_PATH.exists():
         return []
-    with open(WHITELIST_PATH, encoding="utf-8") as f:
+    with WHITELIST_PATH.open(encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
     entries = raw.get("whitelist", []) or []
     for e in entries:
@@ -43,7 +43,7 @@ def _load() -> list[dict]:
 
 
 def _save(entries: list[dict]) -> None:
-    with open(WHITELIST_PATH, "w", encoding="utf-8") as f:
+    with WHITELIST_PATH.open("w", encoding="utf-8") as f:
         yaml.dump(
             {"whitelist": entries}, f, allow_unicode=True, default_flow_style=False
         )

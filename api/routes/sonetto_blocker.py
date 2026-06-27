@@ -3,7 +3,6 @@
 在目标目录中创建/删除 SonettoBlocker 标记文件，
 并持久化跟踪列表到 sonetto_blocker.yaml。"""
 
-import os
 from pathlib import Path
 
 import yaml
@@ -34,14 +33,14 @@ class BlockerResponse(BaseModel):
 def _load() -> list[dict]:
     if not YAML_PATH.exists():
         return []
-    with open(YAML_PATH, encoding="utf-8") as f:
+    with YAML_PATH.open(encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
     return raw.get("blockers", []) or []
 
 
 def _save(entries: list[dict]) -> None:
     YAML_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(YAML_PATH, "w", encoding="utf-8") as f:
+    with YAML_PATH.open("w", encoding="utf-8") as f:
         yaml.dump(
             {"blockers": entries}, f, allow_unicode=True, default_flow_style=False
         )
@@ -60,8 +59,7 @@ def _remove_marker(dir_path: str) -> None:
     if not target.is_dir():
         return
     for item in target.iterdir():
-        name, _ = os.path.splitext(item.name)
-        if name.lower() == BLOCKER_FILENAME.lower():
+        if item.stem.lower() == BLOCKER_FILENAME.lower():
             item.unlink()
             return
 

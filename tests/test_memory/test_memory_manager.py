@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from memory.memory_manager import MemoryManager, MemoryItem
+from memory.memory_manager import MemoryItem, MemoryManager
 
 
 class TestMemoryItem:

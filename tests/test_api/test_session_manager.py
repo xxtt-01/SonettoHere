@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from api.session_manager import SessionManager, SessionState
+from api.session_manager import SessionManager
 
 
 class TestSessionManager:

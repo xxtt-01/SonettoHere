@@ -1,13 +1,13 @@
 """FastAPI 应用工厂 — 生命周期管理、CORS、路由挂载。"""
 
 import os
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-import time
-
+from agent.graph import build_agent
 from api.auth import load_or_create_token
 from api.const_session_store import (
     deserialize_messages,
@@ -15,25 +15,23 @@ from api.const_session_store import (
 )
 from api.dependencies import get_llm, get_system_prompt, get_tools
 from api.health import get_health_report
+from api.middleware.auth import AuthMiddleware
 from api.providers.manager import ProviderManager
 from api.providers.store import ProviderConfigStore
-from api.routes import chat, files, memory, sessions, balance, providers
+from api.routes import balance, chat, files, memory, providers, sessions
+from api.routes import env_vars as env_vars_router
+from api.routes import mcp as mcp_router
+from api.routes import news as news_router
 from api.routes import path_whitelist as path_whitelist_router
 from api.routes import persona as persona_router
-from api.routes import sonetto_blocker as sonetto_blocker_router
-from api.routes import skills as skills_router
-from api.routes import news as news_router
-from api.routes import mcp as mcp_router
 from api.routes import restart as restart_router
-from api.routes import env_vars as env_vars_router
+from api.routes import skills as skills_router
+from api.routes import sonetto_blocker as sonetto_blocker_router
 from api.session_manager import SessionManager, SessionState
 from api.ws_registry import WebSocketRegistry
-from agent.graph import build_agent
 from memory.narrative import MEMORY_PATH, LongTermMemoryInterface
-from tools.mcp import init_mcp_tools, close_mcp
+from tools.mcp import close_mcp, init_mcp_tools
 from version import __version__
-
-from api.middleware.auth import AuthMiddleware
 
 
 async def _load_const_sessions(app: FastAPI):

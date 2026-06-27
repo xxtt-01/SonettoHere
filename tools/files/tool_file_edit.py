@@ -121,7 +121,7 @@ class FileEditTool(ToolBase):
     # ── Read ──────────────────────────────────────────────────────
 
     def _read(self, file_path: str, offset: int = 0, limit: int = 0) -> str:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             lines = f.readlines()
 
         total_lines = len(lines)
@@ -154,7 +154,7 @@ class FileEditTool(ToolBase):
     ) -> str:
         if not old_string:
             return format_error("edit 操作需要提供 old_string")
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         count = content.count(old_string)
@@ -194,7 +194,7 @@ class FileEditTool(ToolBase):
         if not isinstance(edit_list, list) or not edit_list:
             return format_error("edits 应为非空 JSON 数组")
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         results: list[dict[str, Any]] = []
@@ -259,7 +259,7 @@ class FileEditTool(ToolBase):
         except re.error as e:
             return format_error(f"正则表达式错误: {e}")
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             lines = f.readlines()
 
         matches: list[dict[str, Any]] = []

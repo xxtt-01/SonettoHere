@@ -21,7 +21,6 @@ def mock_tiktoken_encoding():
 @pytest.fixture
 def app():
     """带 SessionManager 的最小 app。"""
-    from fastapi import FastAPI
     from unittest.mock import MagicMock
 
     app = FastAPI()

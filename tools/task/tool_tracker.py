@@ -11,7 +11,7 @@ from tools.base import ToolBase, format_error, format_success
 class TodoItem(BaseModel):
     content: str = Field(description="任务描述")
     status: str = Field(description="状态: pending | in_progress | completed")
-    activeForm: str | None = Field(default=None, description="进行中的动名词描述")
+    activeForm: str | None = Field(default=None, description="进行中的动名词描述")  # noqa: N815
 
 
 class TaskTrackerInput(BaseModel):

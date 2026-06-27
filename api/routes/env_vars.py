@@ -103,10 +103,11 @@ async def update_env_var(req: UpdateEnvVarRequest):
     try:
         set_key(str(ENV_PATH), req.key, req.value)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"写入 .env 失败: {e}")
+        raise HTTPException(status_code=500, detail=f"写入 .env 失败: {e}") from e
 
     # 刷新运行时配置
     import importlib
+
     import config.settings
     importlib.reload(config.settings)
     from config.settings import get_settings as reloaded_settings
@@ -135,10 +136,11 @@ async def batch_update_env_vars(req: BatchUpdateEnvVarRequest):
             raise HTTPException(
                 status_code=500,
                 detail=f"写入 {item.key} 失败: {e}",
-            )
+            ) from e
 
     if updated:
         import importlib
+
         import config.settings
         importlib.reload(config.settings)
         from config.settings import get_settings as reloaded_settings

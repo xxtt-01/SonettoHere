@@ -4,7 +4,6 @@ import asyncio
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
@@ -72,10 +71,10 @@ UPDATE_SYSTEM = _UPDATE_PREFIX + _CORE_PRINCIPLES
 
 # ── 模块级 MemoryManager 引用 ──────────────────────────────
 
-_current_mm: Optional[MemoryManager] = None
+_current_mm: MemoryManager | None = None
 
 
-def _set_current_mm(mm: Optional[MemoryManager]) -> None:
+def _set_current_mm(mm: MemoryManager | None) -> None:
     global _current_mm
     _current_mm = mm
 
@@ -210,7 +209,7 @@ def update_memory(id: str, content: str, reason: str) -> str:
 
 
 @tool
-def delete_memory(id: str, reason: str) -> str:
+def delete_memory(id: str, _reason: str) -> str:
     """根据 ID 删除一条记忆。
 
     Args:

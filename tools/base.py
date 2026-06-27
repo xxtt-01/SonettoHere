@@ -4,9 +4,8 @@ import json
 import os
 from pathlib import Path
 
-import yaml
-
 import requests
+import yaml
 from langchain_core.tools import BaseTool
 from todoist_api_python.api import TodoistAPI
 from uapi import UapiClient
@@ -66,7 +65,7 @@ class ToolBase(BaseTool):
         if mod is not None and hasattr(mod, "__file__") and mod.__file__ is not None:
             tool_dir = Path(mod.__file__).parent
         else:
-            tool_dir = Path(".")
+            tool_dir = Path()
         doc_path = tool_dir / "TOOL.md"
         if doc_path.exists():
             return doc_path.read_text(encoding="utf-8")
@@ -482,10 +481,11 @@ def get_safe_builtins() -> dict:
     审查的包装版本。日常计算、模块导入、调试等功能均不受影响。
     """
     # 在非 __main__ 模块中，__builtins__ 是模块对象而非 dict
-    if isinstance(__builtins__, dict):  # type: ignore[name-defined]
-        source = __builtins__  # type: ignore[name-defined]
-    else:
-        source = __builtins__.__dict__  # type: ignore[name-defined]
+    source = (
+        __builtins__  # type: ignore[name-defined]
+        if isinstance(__builtins__, dict)  # type: ignore[name-defined]
+        else __builtins__.__dict__  # type: ignore[name-defined]
+    )
 
     safe = dict(source)
     safe["open"] = _whitelisted_open

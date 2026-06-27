@@ -1,3 +1,10 @@
+## 2026-06-27: ruff 自动修复 — N806 变量重命名
+- **文件:**
+  - `setup.py`
+- **原因:** ruff N806 规则要求变量名小写，Task 1.2.1
+- **决策:** PERSONAS → personas, TEMPLATES → templates，更新全部引用
+- **影响范围:** setup.py 构建脚本
+
 ## 2026-06-27 20:29: 项目初始化
 - **文件:**
   - `CONTEXT.md`

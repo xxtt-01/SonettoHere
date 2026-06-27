@@ -17,7 +17,7 @@ class ProviderConfigStore:
         """返回所有配置（不论 enabled 与否）。"""
         if not self.path.exists():
             return []
-        with open(self.path, encoding="utf-8") as f:
+        with self.path.open(encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
         return [ProviderConfig(**item) for item in raw.get("providers", [])]
 
@@ -50,7 +50,7 @@ class ProviderConfigStore:
 
     def _write_all(self, configs: list[ProviderConfig]) -> None:
         data = {"providers": [c.to_dict() for c in configs]}
-        with open(self.path, "w", encoding="utf-8") as f:
+        with self.path.open("w", encoding="utf-8") as f:
             yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
 
     @property

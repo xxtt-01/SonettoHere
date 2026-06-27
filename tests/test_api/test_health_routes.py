@@ -1,6 +1,5 @@
 """健康检查 API 路由测试。"""
 
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

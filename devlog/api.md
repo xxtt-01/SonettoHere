@@ -1,0 +1,30 @@
+## 2026-06-27: ruff 自动修复 + 手动修复 — B904/SIM/PTH/N806
+- **文件:**
+  - `api/callbacks/tool_extractors.py`
+  - `api/callbacks/websocket_callback.py`
+  - `api/const_session_store.py`
+  - `api/context_usage.py`
+  - `api/providers/__init__.py`
+  - `api/providers/store.py`
+  - `api/routes/balance.py`
+  - `api/routes/chat.py`
+  - `api/routes/env_vars.py`
+  - `api/routes/files.py`
+  - `api/routes/mcp.py`
+  - `api/routes/news.py`
+  - `api/routes/path_whitelist.py`
+  - `api/routes/providers.py`
+  - `api/routes/sessions.py`
+  - `api/routes/skills.py`
+  - `api/routes/sonetto_blocker.py`
+  - `api/server.py`
+- **原因:** 全项目 ruff lint 修复，Task 1.2.1
+- **决策:**
+  - B904: 所有 `raise ... from` 链补全（`from e` / `from None`）
+  - SIM105: 静默异常处理改用 `contextlib.suppress`
+  - SIM108: if-else 简化为三元表达式
+  - PTH: `open()` → `Path.open()`，`os.path` → `pathlib`
+  - N806/N802: 变量/函数名驼峰→小写下划线
+  - ARG001/ARG002: 未使用参数加 `_` 前缀
+  - F841: 删除未使用变量
+- **影响范围:** api 模块全部子包

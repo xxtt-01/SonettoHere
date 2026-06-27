@@ -4,7 +4,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 
-from tools.mcp import get_mcp_error, get_mcp_servers_info, reload_mcp
+from tools.mcp import get_mcp_servers_info, reload_mcp
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +38,9 @@ async def reload_mcp_servers(request: Request):
             "servers": server_info,
             "tool_count": len(new_tools),
         }
-    except Exception as exc:
+    except Exception:
         logger.exception("MCP 重载失败")
         raise HTTPException(
             status_code=500,
             detail="MCP 重载失败",
-        )
+        ) from None

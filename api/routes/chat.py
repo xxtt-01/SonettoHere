@@ -203,8 +203,10 @@ async def _inject_cancel_tool_messages(session, config, ws: WebSocket) -> None:
         return  # checkpoint 已一致
 
     # 通知前端：使运行的工具体进入错误状态
+    import contextlib
+
     for tc in orphaned:
-        try:
+        with contextlib.suppress(Exception):
             await ws.send_json(
                 {
                     "type": "tool_error",
@@ -214,8 +216,6 @@ async def _inject_cancel_tool_messages(session, config, ws: WebSocket) -> None:
                     },
                 }
             )
-        except Exception:
-            pass  # WebSocket 已断开时静默忽略
 
     # 生成取消 ToolMessage 并写入 checkpoint
     cancel_msgs = []

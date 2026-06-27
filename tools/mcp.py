@@ -5,7 +5,7 @@
 """
 
 from pathlib import Path
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Literal
 
 import yaml
 from langchain_core.tools import BaseTool
@@ -109,12 +109,7 @@ class WebsocketServerConfig(_BaseServerMixin):
 
 
 MCPServerConfig = Annotated[
-    Union[
-        StdioServerConfig,
-        SSEServerConfig,
-        StreamableHttpServerConfig,
-        WebsocketServerConfig,
-    ],
+    StdioServerConfig | SSEServerConfig | StreamableHttpServerConfig | WebsocketServerConfig,
     Field(discriminator="transport"),
 ]
 
@@ -250,11 +245,11 @@ async def reload_mcp() -> list[BaseTool]:
     _last_error = None
 
     try:
-        result = await init_mcp_tools()
+        await init_mcp_tools()
         if _tools is None:
             _tools = []
         return _tools
-    except Exception as exc:
+    except Exception:
         # 恢复旧状态
         _client = old_client
         _tools = old_tools

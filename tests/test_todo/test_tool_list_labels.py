@@ -14,13 +14,13 @@ def _make_tool(mock_api, mock_client):
 
 class TestListLabels:
     def test_returns_labels(self, mock_api, mock_client):
-        l = MagicMock()
-        l.id = "l1"
-        l.name = "urgent"
-        l.color = "red"
-        l.order = 1
-        l.is_favorite = False
-        mock_api.get_labels.return_value = [[l]]
+        label = MagicMock()
+        label.id = "l1"
+        label.name = "urgent"
+        label.color = "red"
+        label.order = 1
+        label.is_favorite = False
+        mock_api.get_labels.return_value = [[label]]
 
         tool = _make_tool(mock_api, mock_client)
         result = tool._run(get_doc=False)

@@ -20,61 +20,60 @@ def get_all_tools() -> list[BaseTool]:
     client = _get_client()
 
     # System
-    from tools.system.tool_python import RunPythonTool
-
-    # Todo
-    from tools.todo.tool_add import TodoAddTool
-    from tools.todo.tool_list import TodoListTool
-    from tools.todo.tool_complete import TodoCompleteTool
-    from tools.todo.tool_uncomplete import TodoUncompleteTool
-    from tools.todo.tool_delete import TodoDeleteTool
-    from tools.todo.tool_update import TodoUpdateTool
-    from tools.todo.tool_query import TodoQueryTool
-    from tools.todo.tool_list_projects import TodoListProjectsTool
-    from tools.todo.tool_list_sections import TodoListSectionsTool
-    from tools.todo.tool_list_labels import TodoListLabelsTool
-
-    # Map
-    from tools.map.tool_nearby import NearbySearchTool
-    from tools.map.tool_geocode import GeocodeTool
-    from tools.map.tool_transit import TransitRouteTool
-    from tools.map.tool_cycling import CyclingRouteTool
-    from tools.map.tool_fuzzy_addr import FuzzyAddressTool
-
-    # Network
-    from tools.network.tool_weather import WeatherTool
-    from tools.network.tool_holiday import HolidayCalendarTool
-    from tools.network.tool_image_understand import ImageUnderstandTool
-    from tools.network.tavily import TavilySearchTool, TavilyExtractTool
+    # Entertainment
+    from tools.entertainment.tool_tarot import TarotTool
+    from tools.files.tool_file_edit import FileEditTool
+    from tools.files.tool_file_manage import FileManageTool
 
     # Files
     from tools.files.tool_file_read import FileReadTool
-    from tools.files.tool_file_write import FileWriteTool
-    from tools.files.tool_file_manage import FileManageTool
     from tools.files.tool_file_search import FileSearchTool
-    from tools.files.tool_file_edit import FileEditTool
+    from tools.files.tool_file_write import FileWriteTool
+
+    # Interaction
+    from tools.interaction.tool_ask_qa import AskUserQATool
+    from tools.interaction.tool_multi_choice import AskUserMultiChoiceTool
+    from tools.interaction.tool_single_choice import AskUserSingleChoiceTool
+    from tools.map.tool_cycling import CyclingRouteTool
+    from tools.map.tool_fuzzy_addr import FuzzyAddressTool
+    from tools.map.tool_geocode import GeocodeTool
+
+    # Map
+    from tools.map.tool_nearby import NearbySearchTool
+    from tools.map.tool_transit import TransitRouteTool
+    from tools.memory.tool_create_memory import CreateMemoryTool
+    from tools.memory.tool_delete_memory import DeleteMemoryTool
+
+    # Memory
+    from tools.memory.tool_list_memories import ListMemoriesTool
+    from tools.memory.tool_merge_memories import MergeMemoriesTool
+    from tools.memory.tool_read_memories import ReadMemoriesTool
+    from tools.memory.tool_update_memory import UpdateMemoryTool
+    from tools.network.tavily import TavilyExtractTool, TavilySearchTool
+    from tools.network.tool_holiday import HolidayCalendarTool
+    from tools.network.tool_image_understand import ImageUnderstandTool
+
+    # Network
+    from tools.network.tool_weather import WeatherTool
+
+    # SubAgent
+    from tools.sub_agent.tool_call_sub_agent import CallSubAgentTool
+    from tools.system.tool_python import RunPythonTool
 
     # Task
     from tools.task.tool_tracker import TaskTrackerTool
 
-    # SubAgent
-    from tools.sub_agent.tool_call_sub_agent import CallSubAgentTool
-
-    # Interaction
-    from tools.interaction.tool_ask_qa import AskUserQATool
-    from tools.interaction.tool_single_choice import AskUserSingleChoiceTool
-    from tools.interaction.tool_multi_choice import AskUserMultiChoiceTool
-
-    # Entertainment
-    from tools.entertainment.tool_tarot import TarotTool
-
-    # Memory
-    from tools.memory.tool_list_memories import ListMemoriesTool
-    from tools.memory.tool_read_memories import ReadMemoriesTool
-    from tools.memory.tool_create_memory import CreateMemoryTool
-    from tools.memory.tool_update_memory import UpdateMemoryTool
-    from tools.memory.tool_delete_memory import DeleteMemoryTool
-    from tools.memory.tool_merge_memories import MergeMemoriesTool
+    # Todo
+    from tools.todo.tool_add import TodoAddTool
+    from tools.todo.tool_complete import TodoCompleteTool
+    from tools.todo.tool_delete import TodoDeleteTool
+    from tools.todo.tool_list import TodoListTool
+    from tools.todo.tool_list_labels import TodoListLabelsTool
+    from tools.todo.tool_list_projects import TodoListProjectsTool
+    from tools.todo.tool_list_sections import TodoListSectionsTool
+    from tools.todo.tool_query import TodoQueryTool
+    from tools.todo.tool_uncomplete import TodoUncompleteTool
+    from tools.todo.tool_update import TodoUpdateTool
 
     return [
         # System

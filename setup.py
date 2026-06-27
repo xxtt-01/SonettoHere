@@ -242,7 +242,7 @@ def setup_provider():
 """
 
     if os.path.exists(yaml_path):
-        with open(yaml_path, "r", encoding="utf-8") as f:
+        with open(yaml_path, encoding="utf-8") as f:
             content = f.read()
         content = content.rstrip() + "\n" + entry
     else:
@@ -257,8 +257,8 @@ def setup_provider():
 
 def setup_persona():
     """询问用户称呼，从模板创建个性文件并替换占位符。"""
-    PERSONAS = "config/personas"
-    TEMPLATES = {
+    personas = "config/personas"
+    templates = {
         "USER.md": "USER.example.md",
         "SOUL.md": "SOUL.example.md",
     }
@@ -271,16 +271,16 @@ def setup_persona():
         name = "朋友"
     ok(f"好的，Sonetto 之后会称呼你为「{name}」")
 
-    for target, src in TEMPLATES.items():
-        target_path = os.path.join(PROJECT_ROOT, PERSONAS, target)
-        src_path = os.path.join(PROJECT_ROOT, PERSONAS, src)
+    for target, src in templates.items():
+        target_path = os.path.join(PROJECT_ROOT, personas, target)
+        src_path = os.path.join(PROJECT_ROOT, personas, src)
 
         if not os.path.exists(src_path):
             print(f"  [!] 模板文件 {src} 不存在，跳过")
             continue
 
         # 从模板复制/覆盖
-        with open(src_path, "r", encoding="utf-8") as f:
+        with open(src_path, encoding="utf-8") as f:
             content = f.read()
 
         # 替换 {{USER_NAME}} 占位符

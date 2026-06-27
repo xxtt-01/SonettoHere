@@ -41,6 +41,23 @@
   - fixture 化 patched_const_dir 复用临时目录
 - **影响范围:** 测试 — tests 模块
 
+## 2026-06-27: ruff 自动修复 — E741/ARG005 变量重命名
+- **文件:**
+  - `tests/test_api/test_health_routes.py`
+  - `tests/test_api/test_session_manager.py`
+  - `tests/test_api/test_sessions_routes.py`
+  - `tests/test_memory/test_memory_manager.py`
+  - `tests/test_memory/test_narrative.py`
+  - `tests/test_memory/test_narrative_integration.py`
+  - `tests/test_todo/conftest.py`
+  - `tests/test_todo/test_complete_uncomplete_delete.py`
+  - `tests/test_todo/test_tool_list_labels.py`
+- **原因:** ruff lint 修复，Task 1.2.1
+- **决策:**
+  - E741: `l` → `label`
+  - ARG005: lambda 未使用参数加 `_` 前缀
+- **影响范围:** 测试模块
+
 ## 2026-06-27 22:11: API 路由基础测试（会话/健康检查）
 - **文件:**
   - `tests/test_api/test_sessions_routes.py`

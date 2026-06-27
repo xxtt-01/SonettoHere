@@ -4,8 +4,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from tools.base import ToolBase, format_error, format_success
 from memory.memory_manager import MAX_DESC_LENGTH
+from tools.base import ToolBase, format_error, format_success
 
 
 class MergeMemoriesInput(BaseModel):
