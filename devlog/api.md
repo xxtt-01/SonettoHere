@@ -1,3 +1,17 @@
+## 2026-06-27 22:27: SQLite 基础设施 — 连接管理 + 迁移系统 + 会话表
+- **文件:**
+  - `api/database/__init__.py` (new)
+  - `api/database/migrations/__init__.py` (new)
+  - `api/database/migrations/001_create_sessions.py` (new)
+  - `api/server.py`
+- **原因:** Task 2.1.1 — 创建 SQLite 数据库基础设施，替换 SessionManager 的内存存储为持久化方案
+- **决策:**
+  - 使用 `threading.local()` 实现线程安全的 SQLite 连接单例
+  - 迁移系统基于数字前缀文件名自动发现 + `_migrations` 表追踪
+  - 001 迁移创建 `sessions` 表和 `session_messages` 表
+  - 在 `lifespan` 启动时运行迁移，非致命错误不阻断启动
+- **影响范围:** api/database/, api/server.py
+
 ## 2026-06-27: ruff 自动修复 + 手动修复 — B904/SIM/PTH/N806
 - **文件:**
   - `api/callbacks/tool_extractors.py`

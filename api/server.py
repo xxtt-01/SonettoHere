@@ -123,6 +123,17 @@ async def lifespan(app: FastAPI):
     else:
         print("[ltm] Skipped (no LLM available)")
 
+    # 0. 运行数据库迁移
+    from api.database import get_connection as get_db_conn
+    from api.database.migrations import run_migrations
+    try:
+        db_conn = get_db_conn()
+        applied = run_migrations(db_conn)
+        if applied:
+            print(f"[db] Applied migrations: {applied}")
+    except Exception as e:
+        print(f"[db] Migration error (non-fatal): {e}")
+
     # 从 YAML 配置加载 MCP 工具
     app.state.mcp_tools = await init_mcp_tools()
     app.state.tools = app.state.native_tools + app.state.mcp_tools

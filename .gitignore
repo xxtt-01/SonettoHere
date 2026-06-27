@@ -41,6 +41,11 @@ Thumbs.db
 # 用户固定会话（Const Session）持久化数据
 api/data/const-sessions/
 
+# SQLite database
+api/data/*.db
+api/data/*.db-wal
+api/data/*.db-shm
+
 # Project specific
 botpy.log
 *.dll

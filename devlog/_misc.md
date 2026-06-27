@@ -1,3 +1,10 @@
+## 2026-06-27 22:27: .gitignore 添加 SQLite 数据库忽略规则
+- **文件:**
+  - `.gitignore`
+- **原因:** Task 2.1.1 — SQLite 数据库文件不应提交到 git
+- **决策:** 添加 `api/data/*.db`、`api/data/*.db-wal`、`api/data/*.db-shm` 模式
+- **影响范围:** .gitignore
+
 ## 2026-06-27: ruff 自动修复 — N806 变量重命名
 - **文件:**
   - `setup.py`
