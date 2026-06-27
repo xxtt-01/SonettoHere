@@ -21,7 +21,11 @@ async def unified_error_handler(request: Request, exc: Exception) -> JSONRespons
             },
         )
     # 未捕获异常 → 500（不暴露内部细节到生产环境）
-    detail = str(exc) if getattr(request.app, "debug", None) or getattr(request.app.state, "debug", None) else "Internal server error"
+    is_debug = (
+        getattr(request.app, "debug", None)
+        or getattr(request.app.state, "debug", None)
+    )
+    detail = str(exc) if is_debug else "Internal server error"
     return JSONResponse(
         status_code=500,
         content={
