@@ -120,6 +120,4 @@ class ProviderConfigStore:
         configs = yaml_store.load_all()
         if not configs:
             return 0
-        for c in configs:
-            db_store.save(c)
-        return len(configs)
+        return db_store.save_many(configs)

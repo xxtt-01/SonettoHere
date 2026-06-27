@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS providers (
     models_json TEXT NOT NULL DEFAULT '[]',
     enabled INTEGER NOT NULL DEFAULT 1,
     context_window INTEGER NOT NULL DEFAULT 256000,
-    created_at REAL NOT NULL DEFAULT (julianday('now')),
-    updated_at REAL NOT NULL DEFAULT (julianday('now'))
+    created_at REAL NOT NULL DEFAULT (strftime('%s', 'now')),
+    updated_at REAL NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 """
 

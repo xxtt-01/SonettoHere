@@ -68,6 +68,39 @@ class DatabaseProviderStore:
         )
         conn.commit()
 
+    def save_many(self, configs: list[ProviderConfig]) -> int:
+        """批量保存多个配置，在单个事务中执行。"""
+        conn = get_connection()
+        conn.execute("BEGIN")
+        for config in configs:
+            conn.execute(
+                """INSERT INTO providers (id, provider_type, label, api_key, base_url,
+                   models_json, enabled, context_window, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(id) DO UPDATE SET
+                   provider_type=excluded.provider_type,
+                   label=excluded.label,
+                   api_key=excluded.api_key,
+                   base_url=excluded.base_url,
+                   models_json=excluded.models_json,
+                   enabled=excluded.enabled,
+                   context_window=excluded.context_window,
+                   updated_at=excluded.updated_at""",
+                (
+                    config.id,
+                    config.provider_type,
+                    config.label,
+                    config.api_key,
+                    config.base_url,
+                    json.dumps(config.models),
+                    int(config.enabled),
+                    config.context_window,
+                    time.time(),
+                ),
+            )
+        conn.commit()
+        return len(configs)
+
     def delete(self, provider_id: str) -> bool:
         conn = get_connection()
         cursor = conn.execute(
