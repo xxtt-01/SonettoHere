@@ -30,10 +30,10 @@ def close_connection():
 
 
 def verify_connection() -> bool:
-    """验证当前数据库连接是否有效。"""
+    """验证当前线程的数据库连接是否可用，必要时自动创建连接。"""
     try:
         conn = get_connection()
         conn.execute("SELECT 1")
         return True
-    except Exception:
+    except sqlite3.Error:
         return False
