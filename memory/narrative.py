@@ -4,7 +4,6 @@ import asyncio
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
@@ -72,10 +71,10 @@ UPDATE_SYSTEM = _UPDATE_PREFIX + _CORE_PRINCIPLES
 
 # ── 模块级 MemoryManager 引用 ──────────────────────────────
 
-_current_mm: Optional[MemoryManager] = None
+_current_mm: MemoryManager | None = None
 
 
-def _set_current_mm(mm: Optional[MemoryManager]) -> None:
+def _set_current_mm(mm: MemoryManager | None) -> None:
     global _current_mm
     _current_mm = mm
 
@@ -223,7 +222,7 @@ def delete_memory(id: str, reason: str) -> str:
         removed = _current_mm.delete(id)
     except ValueError:
         return f"错误：未找到 ID 为 {id} 的记忆条目。请先调用 read_memories 确认 ID。"
-    return f"已删除 [{id}]: {removed}"
+    return f"已删除 [{id}]: {removed}（原因：{reason}）"
 
 
 @tool
