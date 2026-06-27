@@ -58,6 +58,16 @@
   - ARG005: lambda 未使用参数加 `_` 前缀
 - **影响范围:** 测试模块
 
+## 2026-06-27: SessionManager SQLite 模式测试
+- **文件:**
+  - `tests/test_api/test_session_manager_sqlite.py` (new)
+- **原因:** Task 2.1.2 — 覆盖 DatabaseSessionStore 持久化、加载、删除、memory 模式兼容
+- **决策:**
+  - 使用临时数据库 + run_migrations 确保 sessions 表存在
+  - 创建两个 SessionManager 实例验证跨实例持久化
+  - memory 模式测试确保不受 sqlite 改动影响
+- **影响范围:** 测试 — tests 模块
+
 ## 2026-06-27 22:11: API 路由基础测试（会话/健康检查）
 - **文件:**
   - `tests/test_api/test_sessions_routes.py`

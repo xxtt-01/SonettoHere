@@ -1,3 +1,17 @@
+## 2026-06-27: DatabaseSessionStore + SessionManager 双模式支持
+- **文件:**
+  - `api/database/session_store.py` (new)
+  - `api/session_manager.py`
+  - `tests/test_api/test_session_manager_sqlite.py` (new)
+- **原因:** Task 2.1.2 — 基于 SQLite 的 SessionStore，为 SessionManager 添加 sqlite 持久化模式
+- **决策:**
+  - 新增 `DatabaseSessionStore` 类，封装 sessions 表的 CRUD 操作
+  - SessionManager 新增 `mode` 参数 (`"memory"` | `"sqlite"`)，默认 `"memory"` 保证向后兼容
+  - sqlite 模式下，每次 create/delete 同步写入数据库
+  - 初始化时从 DB 加载已有会话到内存
+  - 注意：`get_or_create` 目前只操作内存，不写入 DB（保持原有行为）
+- **影响范围:** api/database/, api/session_manager.py, tests/
+
 ## 2026-06-27 22:27: SQLite 基础设施 — 连接管理 + 迁移系统 + 会话表
 - **文件:**
   - `api/database/__init__.py` (new)

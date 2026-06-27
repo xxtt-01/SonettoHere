@@ -4,6 +4,7 @@ import asyncio
 import time
 import uuid
 from dataclasses import dataclass, field
+from typing import Literal
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.state import CompiledStateGraph
@@ -32,14 +33,61 @@ class SessionState:
 
 
 class SessionManager:
-    def __init__(self, ttl_seconds: int = 1800) -> None:
+    """会话管理器。
+
+    mode='memory': 原有行为，仅内存（默认，向后兼容）
+    mode='sqlite': 内存 + SQLite 持久化
+    """
+
+    def __init__(
+        self,
+        ttl_seconds: int = 1800,
+        mode: Literal["memory", "sqlite"] = "memory",
+    ) -> None:
         self._sessions: dict[str, SessionState] = {}
         self._ttl = ttl_seconds
+        self._mode = mode
+
+        self._db_store = None
+        if mode == "sqlite":
+            from api.database.session_store import DatabaseSessionStore
+
+            self._db_store = DatabaseSessionStore()
+            self._load_from_db()
+
+    # ── 数据库恢复 ──────────────────────────────────────────
+
+    def _load_from_db(self) -> None:
+        """从 SQLite 加载所有会话到内存。"""
+        if self._db_store is None:
+            return
+        for row in self._db_store.load_all_sessions():
+            session = SessionState(
+                session_id=row["session_id"],
+                created_at=row["created_at"],
+                last_active=row["last_active"],
+                message_count=row["message_count"],
+                is_subagent=bool(row["is_subagent"]),
+                parent_session_id=row.get("parent_session_id"),
+                is_const=bool(row["is_const"]),
+                const_name=row.get("const_name", ""),
+            )
+            self._sessions[session.session_id] = session
+
+    # ── CRUD ────────────────────────────────────────────────
 
     def create(self) -> SessionState:
         session_id = uuid.uuid4().hex
         session = SessionState(session_id=session_id)
         self._sessions[session_id] = session
+
+        if self._db_store:
+            self._db_store.save_session(
+                session_id=session_id,
+                created_at=session.created_at,
+                last_active=session.last_active,
+                message_count=session.message_count,
+            )
         return session
 
     def create_sub_session(
@@ -57,6 +105,16 @@ class SessionManager:
             _pending_result=asyncio.Future(),
         )
         self._sessions[session_id] = session
+
+        if self._db_store:
+            self._db_store.save_session(
+                session_id=session_id,
+                created_at=session.created_at,
+                last_active=session.last_active,
+                is_subagent=True,
+                parent_session_id=parent_session_id,
+                sub_agent_task=task,
+            )
         return session
 
     def get(self, session_id: str) -> SessionState | None:
@@ -75,6 +133,8 @@ class SessionManager:
     def delete(self, session_id: str) -> bool:
         if session_id in self._sessions:
             del self._sessions[session_id]
+            if self._db_store:
+                self._db_store.delete_session(session_id)
             return True
         return False
 
@@ -104,4 +164,8 @@ class SessionManager:
         ]
         for sid in expired:
             del self._sessions[sid]
-        return len(expired)
+
+        db_cleaned = 0
+        if self._db_store:
+            db_cleaned = self._db_store.cleanup_expired(self._ttl)
+        return max(len(expired), db_cleaned)
