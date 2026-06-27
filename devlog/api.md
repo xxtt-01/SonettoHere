@@ -89,3 +89,20 @@
   - HTTPException 和未捕获异常分别处理，生产环境不暴露内部细节
   - 为 `session_manager.py` 补充 `__init__` 的 `-> None` 返回类型注解
 - **影响范围:** api/middleware/, api/server.py, api/session_manager.py
+
+## 2026-06-28: Provider SQLite 迁移 — 配置表 + 双模式存储 + YAML 导入
+- **文件:**
+  - `api/database/migrations/002_create_providers.py` (new)
+  - `api/database/provider_store.py` (new)
+  - `api/providers/store.py`
+  - `api/server.py`
+  - `tests/test_api/test_provider_store.py` (new)
+- **原因:** Task 2.1.4 — 将 ProviderConfigStore 从 YAML 文件存储迁移到 SQLite，沿用 SessionManager 双模式模式
+- **决策:**
+  - 新增 migration 002 创建 `providers` 表
+  - 新增 `DatabaseProviderStore` 类封装 providers 表 CRUD
+  - `ProviderConfigStore` 添加 `mode` 参数（`"yaml"` | `"sqlite"` | `"memory"`），默认 `"yaml"` 向后兼容
+  - `server.py` 切换为 `mode="sqlite"`，启动时尝试从 YAML 导入再 fallback 到 .env
+  - 新增 `import_from_yaml` 静态方法支持一键迁移
+  - 9 个测试覆盖三种模式 + YAML 导入，全量 214 测试无回归
+- **影响范围:** api/database/, api/providers/store.py, api/server.py, tests/

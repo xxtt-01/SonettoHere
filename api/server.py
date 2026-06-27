@@ -3,6 +3,7 @@
 import os
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -93,12 +94,20 @@ async def _load_const_sessions(app: FastAPI):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. 初始化 Provider 管理器（优先从 YAML 加载）
-    provider_store = ProviderConfigStore()
+    # 1. 初始化 Provider 管理器（SQLite 存储，支持从 YAML 导入）
+    provider_store = ProviderConfigStore(mode="sqlite")
     if provider_store.is_empty:
-        migrated = provider_store.migrate_from_env()
-        if migrated:
-            print(f"[provider] migrated {migrated.label} from .env → providers.yaml")
+        # 尝试从 YAML 导入
+        yaml_path = Path("providers.yaml")
+        if yaml_path.exists():
+            imported = ProviderConfigStore.import_from_yaml(yaml_path)
+            if imported:
+                print(f"[provider] imported {imported} config(s) from providers.yaml → SQLite")
+        # 尝试从 .env 迁移
+        if provider_store.is_empty:
+            migrated = provider_store.migrate_from_env()
+            if migrated:
+                print(f"[provider] migrated {migrated.label} from .env → SQLite")
     provider_manager = ProviderManager(provider_store)
     provider_manager.load_all()
     app.state.provider_manager = provider_manager
@@ -229,7 +238,6 @@ def create_app() -> FastAPI:
     # 生产环境：挂载前端静态文件
     if os.environ.get("SONETTO_ENV") == "production":
         from fastapi.staticfiles import StaticFiles
-        from pathlib import Path
 
         frontend_dist = Path(__file__).resolve().parent.parent / "web" / "dist"
         if frontend_dist.exists():

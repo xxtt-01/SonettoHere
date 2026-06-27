@@ -79,3 +79,14 @@
   - health 路由 mock 所有外部依赖（provider_manager、ltm、memory_path）
   - 添加 autouse fixture 屏蔽 tiktoken SSL 错误和 memory.yaml 缺失问题
 - **影响范围:** 测试 — tests 模块，10 个测试全部通过
+
+## 2026-06-28: Provider 存储单元测试（YAML/SQLite/导入三种场景）
+- **文件:**
+  - `tests/test_api/test_provider_store.py` (new)
+- **原因:** Task 2.1.4 — 覆盖 ProviderConfigStore 三种模式及 YAML→SQLite 导入
+- **决策:**
+  - TestProviderStoreYamlMode：3 个测试验证 YAML 模式向后兼容
+  - TestProviderStoreSqliteMode：5 个测试验证 SQLite CRUD + memory 模式
+  - TestImportFromYaml：1 个测试验证 YAML→SQLite 一键导入
+  - 使用临时目录 + patch DB_PATH 隔离测试数据库
+- **影响范围:** 测试 — tests 模块

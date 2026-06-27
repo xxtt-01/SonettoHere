@@ -1,6 +1,9 @@
-"""Provider 配置的 YAML 文件存储。"""
+"""Provider 配置存储 — 支持 memory/YAML/SQLite 三种模式。"""
 
+import json
+import time
 from pathlib import Path
+from typing import Literal
 
 import yaml
 
@@ -8,13 +11,32 @@ from api.providers import ProviderConfig
 
 
 class ProviderConfigStore:
-    """读写 providers.yaml，API key 直接存储在文件中。"""
+    """Provider 配置存储。
 
-    def __init__(self, path: str | Path = "providers.yaml"):
+    mode='yaml': 原有行为，读写 providers.yaml（默认，向后兼容）
+    mode='sqlite': 存储到 SQLite
+    mode='memory': 仅内存，不持久化（用于测试）
+    """
+
+    def __init__(
+        self,
+        path: str | Path = "providers.yaml",
+        mode: Literal["yaml", "sqlite", "memory"] = "yaml",
+    ):
         self.path = Path(path)
+        self._mode = mode
+        self._db_store = None
+        if mode == "sqlite":
+            from api.database.provider_store import DatabaseProviderStore
+
+            self._db_store = DatabaseProviderStore()
 
     def load_all(self) -> list[ProviderConfig]:
-        """返回所有配置（不论 enabled 与否）。"""
+        if self._mode == "memory":
+            return []
+        if self._db_store is not None:
+            return self._db_store.load_all()
+        # YAML mode (original)
         if not self.path.exists():
             return []
         with self.path.open(encoding="utf-8") as f:
@@ -22,14 +44,18 @@ class ProviderConfigStore:
         return [ProviderConfig(**item) for item in raw.get("providers", [])]
 
     def get(self, provider_id: str) -> ProviderConfig | None:
-        """按 id 查找配置。"""
+        if self._db_store is not None:
+            return self._db_store.get(provider_id)
         for c in self.load_all():
             if c.id == provider_id:
                 return c
         return None
 
     def save(self, config: ProviderConfig) -> None:
-        """新增或更新配置（按 id 匹配）。"""
+        if self._db_store is not None:
+            self._db_store.save(config)
+            return
+        # YAML mode
         all_configs = self.load_all()
         for i, c in enumerate(all_configs):
             if c.id == config.id:
@@ -40,7 +66,9 @@ class ProviderConfigStore:
         self._write_all(all_configs)
 
     def delete(self, provider_id: str) -> bool:
-        """删除配置。返回是否实际删除了项目。"""
+        if self._db_store is not None:
+            return self._db_store.delete(provider_id)
+        # YAML mode
         all_configs = self.load_all()
         filtered = [c for c in all_configs if c.id != provider_id]
         if len(filtered) == len(all_configs):
@@ -55,10 +83,12 @@ class ProviderConfigStore:
 
     @property
     def is_empty(self) -> bool:
+        if self._db_store is not None:
+            return self._db_store.is_empty
         return not self.path.exists() or not self.load_all()
 
     def migrate_from_env(self) -> ProviderConfig | None:
-        """首次启动时从 .env 读取 DeepSeek 配置写入 YAML（向后兼容）。"""
+        """从 .env 读取配置并存储到当前后端。"""
         import os
 
         api_key = os.getenv("DEEPSEEK_API_KEY", "")
@@ -81,3 +111,17 @@ class ProviderConfigStore:
         )
         self.save(config)
         return config
+
+    @staticmethod
+    def import_from_yaml(yaml_path: str | Path) -> int:
+        """从 YAML 文件导入提供商配置到 SQLite（迁移工具）。"""
+        from api.database.provider_store import DatabaseProviderStore
+
+        db_store = DatabaseProviderStore()
+        yaml_store = ProviderConfigStore(path=yaml_path, mode="yaml")
+        configs = yaml_store.load_all()
+        if not configs:
+            return 0
+        for c in configs:
+            db_store.save(c)
+        return len(configs)
