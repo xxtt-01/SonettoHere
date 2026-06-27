@@ -1,7 +1,8 @@
-"""共享 fixtures — FastAPI TestClient、认证 Token、最小测试 app。"""
+"""共享 fixtures — FastAPI TestClient、认证 Token、完整 app 工厂。"""
 
 import pytest
 from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 from starlette.testclient import TestClient
 
 from api.middleware.auth import AuthMiddleware
@@ -15,15 +16,7 @@ def auth_token() -> str:
 
 @pytest.fixture
 def minimal_app(auth_token: str) -> FastAPI:
-    """创建一个最小化的 FastAPI app 用于测试 AuthMiddleware。
-
-    包含：
-    - 一个受保护的 /api/test 路由
-    - 一个白名单 /api/health 路由
-    - 一个不受保护的 /open 路由
-    - 一个 /ws/test 路由（WebSocket 路径受保护）
-    - AuthMiddleware
-    """
+    """最小化 FastAPI app 用于测试 AuthMiddleware。"""
     app = FastAPI()
 
     @app.get("/api/test")
@@ -51,3 +44,27 @@ def minimal_app(auth_token: str) -> FastAPI:
 def client(minimal_app: FastAPI) -> TestClient:
     """Starlette TestClient 实例。"""
     return TestClient(minimal_app)
+
+
+@pytest.fixture
+def full_app() -> FastAPI:
+    """完整应用实例，Mock LLM 和文件系统以避免真实 API 调用。"""
+    from unittest.mock import MagicMock
+
+    from api.server import create_app
+
+    app = create_app()
+    # Mock LLM 以避免真实 API 调用
+    app.state.llm = None
+    return app
+
+
+@pytest.fixture
+async def async_client(full_app: FastAPI) -> AsyncClient:
+    """异步 HTTP 客户端。"""
+    from asgi_lifespan import LifespanManager
+
+    transport = ASGITransport(app=full_app)
+    async with LifespanManager(full_app):
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            yield client
