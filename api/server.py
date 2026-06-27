@@ -166,6 +166,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # 全局异常处理器
+    from api.middleware.error_handler import unified_error_handler
+
+    app.add_exception_handler(Exception, unified_error_handler)
+
     # REST 路由
     app.include_router(sessions.router, prefix="/api")
     app.include_router(memory.router, prefix="/api")

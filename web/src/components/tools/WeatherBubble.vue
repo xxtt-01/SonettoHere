@@ -117,7 +117,7 @@ const rawOutput = props.toolCall.output
 if (rawOutput) {
   try {
     const parsed = JSON.parse(rawOutput)
-    console.log('[WeatherBubble] raw output data keys:', Object.keys(parsed.data || {}), 'forecast:', JSON.stringify(parsed.data?.forecast?.slice(0, 2)))
+    // TODO: dead? console.log('[WeatherBubble] raw output data keys:', Object.keys(parsed.data || {}), 'forecast:', JSON.stringify(parsed.data?.forecast?.slice(0, 2)))
   } catch {}
 }
 

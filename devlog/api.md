@@ -28,3 +28,15 @@
   - ARG001/ARG002: 未使用参数加 `_` 前缀
   - F841: 删除未使用变量
 - **影响范围:** api 模块全部子包
+
+## 2026-06-27: 统一错误处理中间件 + 类型注解完善
+- **文件:**
+  - `api/middleware/error_handler.py` (new)
+  - `api/server.py`
+  - `api/session_manager.py`
+- **原因:** Task 1.2.2 + 1.2.3 代码质量改进
+- **决策:**
+  - 新增 `unified_error_handler` 全局异常处理中间件，统一 JSON 错误响应格式
+  - HTTPException 和未捕获异常分别处理，生产环境不暴露内部细节
+  - 为 `session_manager.py` 补充 `__init__` 的 `-> None` 返回类型注解
+- **影响范围:** api/middleware/, api/server.py, api/session_manager.py

@@ -547,17 +547,17 @@ async function _pick(type: 'file' | 'folder') {
       const refType = type === 'folder' ? 'folder' : 'file'
       const idx = refs.value.length
       refs.value.push({ type: refType, path: data.path, label: getFileName(data.path) } as ParsedRef)
-      console.log('[ChatInput] _pick: pushed ref idx=%d type=%s path=%s', idx, refType, data.path)
+      // TODO: dead? console.log('[ChatInput] _pick: pushed ref idx=%d type=%s path=%s', idx, refType, data.path)
 
       // 异步检查路径是否被拒止锚或白名单阻挡
       api.checkPathBlocked(data.path).then(result => {
-        console.log('[ChatInput] checkPathBlocked result for', data.path, result)
+        // TODO: dead? console.log('[ChatInput] checkPathBlocked result for', data.path, result)
         if (result.blocked) {
           // 通过 refs.value[idx] 操作以触发响应式更新
           const entry = refs.value[idx] as any
           entry.blocked = true
           entry.blockedReason = result.reason
-          console.log('[ChatInput] marked ref %d as blocked, reason: %s', idx, result.reason)
+          // TODO: dead? console.log('[ChatInput] marked ref %d as blocked, reason: %s', idx, result.reason)
         }
       }).catch(err => {
         console.warn('[ChatInput] checkPathBlocked failed:', err)

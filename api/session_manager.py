@@ -32,7 +32,7 @@ class SessionState:
 
 
 class SessionManager:
-    def __init__(self, ttl_seconds: int = 1800):
+    def __init__(self, ttl_seconds: int = 1800) -> None:
         self._sessions: dict[str, SessionState] = {}
         self._ttl = ttl_seconds
 

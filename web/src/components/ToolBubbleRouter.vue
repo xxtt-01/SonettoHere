@@ -19,11 +19,7 @@ const emit = defineEmits<{ (e: 'action', p: { action: string; data?: unknown }):
 
 const bubbleComponent = computed(() => {
   const comp = getBubbleComponent(props.toolCall.name)
-  console.log('[ToolBubbleRouter] toolCall:', {
-    name: props.toolCall.name,
-    status: props.toolCall.status,
-    component: comp ? comp.name || 'AsyncComponent' : 'null → ToolCallCard fallback',
-  })
+  // TODO: dead? console.log('[ToolBubbleRouter] toolCall:', { name, status, component })
   return comp
 })
 

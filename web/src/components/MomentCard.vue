@@ -45,11 +45,11 @@ const moment = ref<MomentItem | null>(null)
 const loading = ref(false)
 
 async function fetchMoment() {
-  console.log('[MomentCard] fetchMoment called')
+  // TODO: dead? console.log('[MomentCard] fetchMoment called')
   loading.value = true
   try {
     const res = await api.getMoment()
-    console.log('[MomentCard] API response:', res)
+    // TODO: dead? console.log('[MomentCard] API response:', res)
     moment.value = res.moment
   } catch (e) {
     console.error('[MomentCard] API error:', e)
@@ -60,7 +60,7 @@ async function fetchMoment() {
 }
 
 onMounted(() => {
-  console.log('[MomentCard] mounted')
+  // TODO: dead? console.log('[MomentCard] mounted')
   fetchMoment()
 })
 </script>

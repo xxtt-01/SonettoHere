@@ -132,13 +132,7 @@ const interactionData = computed(() => {
         interactionId: '',
         submitted: false,
       }
-  console.log('[AskUserBubble] interactionData computed:', {
-    status: props.toolCall.status,
-    submitted: submitted.value,
-    hasInteraction: !!props.toolCall.interaction,
-    interactionId: result.interactionId,
-    mode: result.mode,
-  })
+  // TODO: dead? console.log('[AskUserBubble] interactionData computed:', { status, submitted, hasInteraction, interactionId, mode })
   return result
 })
 
