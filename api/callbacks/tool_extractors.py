@@ -137,7 +137,7 @@ def _extract_todo_labels(
 
 @register_prefix("todo_")
 def _extract_todo_generic(
-    tool_name: str,
+    _tool_name: str,
     parsed: dict[str, Any],
     _tool_input: str | None = None,
 ) -> dict[str, Any] | None:
@@ -1007,7 +1007,7 @@ def _extract_read_memories(
 @register("delete_memory")
 @register("merge_memories")
 def _extract_memory_generic(
-    tool_name: str,
+    _tool_name: str,
     parsed: dict[str, Any],
     _tool_input: str | None = None,
 ) -> dict[str, Any] | None:

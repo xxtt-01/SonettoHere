@@ -1,13 +1,14 @@
 """FastAPI 应用工厂 — 生命周期管理、CORS、路由挂载。"""
 
 import os
+import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-import time
-
+from agent.graph import build_agent
 from api.auth import load_or_create_token
 from api.const_session_store import (
     deserialize_messages,
@@ -15,25 +16,23 @@ from api.const_session_store import (
 )
 from api.dependencies import get_llm, get_system_prompt, get_tools
 from api.health import get_health_report
+from api.middleware.auth import AuthMiddleware
 from api.providers.manager import ProviderManager
 from api.providers.store import ProviderConfigStore
-from api.routes import chat, files, memory, sessions, balance, providers
+from api.routes import balance, chat, files, memory, providers, sessions
+from api.routes import env_vars as env_vars_router
+from api.routes import mcp as mcp_router
+from api.routes import news as news_router
 from api.routes import path_whitelist as path_whitelist_router
 from api.routes import persona as persona_router
-from api.routes import sonetto_blocker as sonetto_blocker_router
-from api.routes import skills as skills_router
-from api.routes import news as news_router
-from api.routes import mcp as mcp_router
 from api.routes import restart as restart_router
-from api.routes import env_vars as env_vars_router
+from api.routes import skills as skills_router
+from api.routes import sonetto_blocker as sonetto_blocker_router
 from api.session_manager import SessionManager, SessionState
 from api.ws_registry import WebSocketRegistry
-from agent.graph import build_agent
 from memory.narrative import MEMORY_PATH, LongTermMemoryInterface
-from tools.mcp import init_mcp_tools, close_mcp
+from tools.mcp import close_mcp, init_mcp_tools
 from version import __version__
-
-from api.middleware.auth import AuthMiddleware
 
 
 async def _load_const_sessions(app: FastAPI):
@@ -95,12 +94,20 @@ async def _load_const_sessions(app: FastAPI):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. 初始化 Provider 管理器（优先从 YAML 加载）
-    provider_store = ProviderConfigStore()
+    # 1. 初始化 Provider 管理器（SQLite 存储，支持从 YAML 导入）
+    provider_store = ProviderConfigStore(mode="sqlite")
     if provider_store.is_empty:
-        migrated = provider_store.migrate_from_env()
-        if migrated:
-            print(f"[provider] migrated {migrated.label} from .env → providers.yaml")
+        # 尝试从 YAML 导入
+        yaml_path = Path("providers.yaml")
+        if yaml_path.exists():
+            imported = ProviderConfigStore.import_from_yaml(yaml_path)
+            if imported:
+                print(f"[provider] imported {imported} config(s) from providers.yaml → SQLite")
+        # 尝试从 .env 迁移
+        if provider_store.is_empty:
+            migrated = provider_store.migrate_from_env()
+            if migrated:
+                print(f"[provider] migrated {migrated.label} from .env → SQLite")
     provider_manager = ProviderManager(provider_store)
     provider_manager.load_all()
     app.state.provider_manager = provider_manager
@@ -117,13 +124,24 @@ async def lifespan(app: FastAPI):
         app.state.llm = None
     app.state.system_prompt = get_system_prompt()
     app.state.native_tools = get_tools()
-    app.state.session_manager = SessionManager()
+    app.state.session_manager = SessionManager(mode="sqlite")
     app.state.ws_registry = WebSocketRegistry()
     app.state.ltm = LongTermMemoryInterface(MEMORY_PATH)
     if app.state.llm is not None:
         app.state.ltm.start_listening(app.state.llm, ws_registry=app.state.ws_registry)
     else:
         print("[ltm] Skipped (no LLM available)")
+
+    # 0. 运行数据库迁移
+    from api.database import get_connection as get_db_conn
+    from api.database.migrations import run_migrations
+    try:
+        db_conn = get_db_conn()
+        applied = run_migrations(db_conn)
+        if applied:
+            print(f"[db] Applied migrations: {applied}")
+    except Exception as e:
+        print(f"[db] Migration error (non-fatal): {e}")
 
     # 从 YAML 配置加载 MCP 工具
     app.state.mcp_tools = await init_mcp_tools()
@@ -168,6 +186,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # 全局异常处理器
+    from api.middleware.error_handler import unified_error_handler
+
+    app.add_exception_handler(Exception, unified_error_handler)
+
     # REST 路由
     app.include_router(sessions.router, prefix="/api")
     app.include_router(memory.router, prefix="/api")
@@ -211,5 +234,18 @@ def create_app() -> FastAPI:
 
     # 认证中间件（在路由之后添加，确保只拦截 API/WS 路径）
     app.add_middleware(AuthMiddleware)
+
+    # 生产环境：挂载前端静态文件
+    if os.environ.get("SONETTO_ENV") == "production":
+        from fastapi.staticfiles import StaticFiles
+
+        frontend_dist = Path(__file__).resolve().parent.parent / "web" / "dist"
+        if frontend_dist.exists():
+            app.mount(
+                "/",
+                StaticFiles(directory=str(frontend_dist), html=True),
+                name="frontend",
+            )
+            print(f"[server] Mounted frontend static files from {frontend_dist}")
 
     return app

@@ -46,7 +46,7 @@ class WebSocketCallback(BaseCallbackHandler):
         return _dispatch(tool_name, parsed, tool_input)
 
     async def on_llm_start(
-        self, serialized: dict[str, Any], prompts: list[str], **kwargs: Any
+        self, _serialized: dict[str, Any], _prompts: list[str], **_kwargs: Any
     ) -> None:
         self._thinking_started = True
         await self._ws.send_json(
@@ -56,7 +56,7 @@ class WebSocketCallback(BaseCallbackHandler):
             }
         )
 
-    async def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
+    async def on_llm_new_token(self, token: str, **_kwargs: Any) -> None:
         await self._ws.send_json(
             {
                 "type": "token",
@@ -64,7 +64,7 @@ class WebSocketCallback(BaseCallbackHandler):
             }
         )
 
-    async def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
+    async def on_llm_end(self, _response: LLMResult, **_kwargs: Any) -> None:
         if self._thinking_started:
             self._thinking_started = False
             await self._ws.send_json(

@@ -1,9 +1,10 @@
 """REST API — 系统更新动态。"""
 
+from pathlib import Path
+
+import yaml
 from fastapi import APIRouter
 from pydantic import BaseModel
-from pathlib import Path
-import yaml
 
 router = APIRouter()
 
@@ -35,7 +36,7 @@ class ListNewsResponse(BaseModel):
 def _load_news() -> list[NewsEntry]:
     if not NEWS_PATH.exists():
         return []
-    with open(NEWS_PATH, encoding="utf-8") as f:
+    with NEWS_PATH.open(encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
     entries = [NewsEntry(**item) for item in raw.get("news", [])]
     # 按日期降序排列（最新的在前）

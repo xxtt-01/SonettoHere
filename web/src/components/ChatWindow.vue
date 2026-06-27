@@ -1,5 +1,10 @@
 <template>
   <div class="chat-window" ref="windowRef">
+    <!-- 连接中加载指示 -->
+    <div v-if="connected === false && turns.length === 0 && !currentTurn" class="connecting-overlay">
+      <div class="connecting-spinner"></div>
+      <span class="connecting-text">正在连接...</span>
+    </div>
     <div class="messages-list">
       <!-- 所有轮次（已完成 + 正在流式）合并在同一列表中，:key="turn.id" 确保
            组件实例在 turn 从当前轮过渡到已完成时不销毁重建，避免 iframe 闪烁 -->
@@ -145,6 +150,7 @@ const props = defineProps<{
   turns: ChatTurn[]
   currentTurn: ChatTurn | null
   error: string | null
+  connected?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -642,5 +648,30 @@ function closeContextMenu() {
   font-variant-numeric: tabular-nums;
   opacity: 0.6;
   font-size: 10px;
+}
+
+/* ── 连接中加载指示 ── */
+.connecting-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+}
+.connecting-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: connecting-spin 0.8s linear infinite;
+}
+@keyframes connecting-spin {
+  to { transform: rotate(360deg); }
+}
+.connecting-text {
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 </style>

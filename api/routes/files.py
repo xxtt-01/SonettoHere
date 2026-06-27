@@ -19,24 +19,22 @@ async def select_file(type: str = "file"):
     type: "file" 选择文件, "folder" 选择文件夹
     """
     try:
+        import sys
         import tkinter as tk
         from tkinter import filedialog
-
-        import sys
 
         def _set_dpi_awareness() -> None:
             """启用 Windows DPI 感知，避免对话框在高 DPI 下模糊。"""
             if sys.platform == "win32":
+                import contextlib
                 import ctypes
 
                 try:
                     # PROCESS_PER_MONITOR_DPI_AWARE = 1
                     ctypes.windll.shcore.SetProcessDpiAwareness(1)
                 except (AttributeError, OSError):
-                    try:
+                    with contextlib.suppress(AttributeError, OSError):
                         ctypes.windll.user.SetProcessDPIAware()
-                    except (AttributeError, OSError):
-                        pass
 
         def _open_dialog() -> str | None:
             _set_dpi_awareness()
@@ -72,9 +70,9 @@ async def select_file(type: str = "file"):
     except ImportError:
         raise HTTPException(
             status_code=500, detail="tkinter 不可用，无法打开文件对话框"
-        )
+        ) from None
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"打开文件对话框失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"打开文件对话框失败: {str(e)}") from e
 
 
 @router.get("/file")

@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field
 
-from tools.base import ToolBase, format_error, format_success
+from tools.base import ToolBase, format_success
 from tools.todo.todo_base import TodoAPIHelper
 
 
@@ -31,7 +31,7 @@ class TodoListLabelsTool(ToolBase):
             return self._load_doc()
 
         all_labels = self.helper.get_all_labels()
-        label_list = [self.helper.label_to_dict(l) for l in all_labels]
+        label_list = [self.helper.label_to_dict(label) for label in all_labels]
         label_list.sort(key=lambda x: x["name"])
 
         return format_success({"total": len(label_list), "labels": label_list})

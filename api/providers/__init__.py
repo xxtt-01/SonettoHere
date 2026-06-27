@@ -1,7 +1,7 @@
 """Provider 抽象基类与类型定义。"""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict, field
+from dataclasses import asdict, dataclass, field
 from typing import Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel

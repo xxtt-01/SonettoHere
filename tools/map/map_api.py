@@ -37,7 +37,7 @@ def parse_transit_response(json_data: dict) -> dict:
     route = json_data.get("route", {})
     transits = route.get("transits", [])
 
-    for t_key, transit in enumerate(transits):
+    for _t_key, transit in enumerate(transits):
         walking_dist = transit.get("walking_distance", 0)
         if isinstance(walking_dist, list):
             walking_dist = walking_dist[0] if walking_dist else 0

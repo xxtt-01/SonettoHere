@@ -43,9 +43,9 @@ async def get_deepseek_balance(request: Request):
             response = await client.get(DEEPSEEK_BALANCE_URL, headers=headers)
             data = response.json()
     except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="DeepSeek API timeout")
+        raise HTTPException(status_code=504, detail="DeepSeek API timeout") from None
     except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=500, detail=f"DeepSeek API error: {e}")
+        raise HTTPException(status_code=500, detail=f"DeepSeek API error: {e}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DeepSeek API error: {e}")
+        raise HTTPException(status_code=500, detail=f"DeepSeek API error: {e}") from e
     return data

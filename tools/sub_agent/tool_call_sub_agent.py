@@ -8,7 +8,7 @@ import traceback
 from pydantic import BaseModel, Field
 
 from api import interaction
-from tools.base import ToolBase, format_success, format_error
+from tools.base import ToolBase, format_error, format_success
 
 
 class CallSubAgentInput(BaseModel):
@@ -133,7 +133,7 @@ class CallSubAgentTool(ToolBase):
                     f"[call_sub_agent] pending_result resolved, answer len={len(final_answer)}",
                     file=sys.stderr,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 print(
                     "[call_sub_agent] timeout waiting for pending_result (120s), trying background...",
                     file=sys.stderr,
@@ -179,9 +179,10 @@ class CallSubAgentTool(ToolBase):
             f"[call_sub_agent] _run_background starting for {sub.session_id}",
             file=sys.stderr,
         )
+        from langchain_core.messages import HumanMessage
+
         from agent.graph import build_agent
         from agent.prompts import build_system_prompt
-        from langchain_core.messages import HumanMessage
 
         system_prompt = build_system_prompt()
         agent = build_agent(

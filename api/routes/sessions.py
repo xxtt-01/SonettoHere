@@ -3,8 +3,8 @@
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from api.context_usage import estimate_context_usage
 from agent.prompts import get_system_prompt_parts
+from api.context_usage import estimate_context_usage
 
 router = APIRouter()
 
@@ -242,7 +242,7 @@ async def generate_session_title(session_id: str, request: Request):
         if not title:
             title = "未命名会话"
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"标题生成失败: {e}")
+        raise HTTPException(status_code=500, detail=f"标题生成失败: {e}") from e
 
     return {"title": title}
 

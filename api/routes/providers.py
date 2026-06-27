@@ -147,7 +147,7 @@ async def test_existing_provider(provider_id: str, request: Request):
     try:
         provider = mgr.get(provider_id)
     except KeyError:
-        raise HTTPException(status_code=404, detail="Provider not found or not enabled")
+        raise HTTPException(status_code=404, detail="Provider not found or not enabled") from None
     result = await provider.check_health()
     return {
         "status": result.status,
@@ -167,7 +167,7 @@ async def discover_models(body: TestConnectionBody):
         model_names = sorted(m.id for m in models.data)
         return {"models": model_names}
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/providers/{provider_id}/discover-models")
@@ -190,4 +190,4 @@ async def discover_models_for_existing(provider_id: str, request: Request):
 
         return {"models": model_names}
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

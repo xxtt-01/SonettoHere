@@ -65,6 +65,7 @@
       :turns="turns"
       :current-turn="currentTurn"
       :error="error"
+      :connected="connected"
       @action="handleToolAction"
       @cite="addCitation"
       @toggle-private="setPrivateMode(!privateMode)"

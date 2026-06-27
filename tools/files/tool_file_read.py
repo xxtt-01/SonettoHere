@@ -37,7 +37,7 @@ class FileReadTool(ToolBase):
         if not os.path.isfile(file_path):
             return format_error(f"路径不是文件: {file_path}")
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = f.read()
 
         st = os.stat(file_path)

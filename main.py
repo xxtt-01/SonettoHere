@@ -1,5 +1,6 @@
 """SonettoHere v2.0.0 — LangGraph ReAct AI Agent Web 入口。"""
 
+import os
 import sys
 
 import uvicorn
@@ -22,8 +23,9 @@ def main():
 
     ensure_all()
 
+    host = "0.0.0.0" if os.environ.get("SONETTO_ENV") == "production" else "127.0.0.1"
     app = create_app()
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host=host, port=8000)
 
 
 if __name__ == "__main__":

@@ -95,7 +95,7 @@ def save_const_session(
         "messages": messages,
     }
     filepath = ensure_dir / f"{session_id}.yaml"
-    with open(filepath, "w", encoding="utf-8") as f:
+    with filepath.open("w", encoding="utf-8") as f:
         yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
     return str(filepath)
 
@@ -103,7 +103,7 @@ def save_const_session(
 def load_const_session(filepath: Path) -> dict | None:
     """加载单个 const 会话 YAML 文件。"""
     try:
-        with open(filepath, encoding="utf-8") as f:
+        with filepath.open(encoding="utf-8") as f:
             return yaml.safe_load(f)
     except Exception:
         return None
