@@ -209,7 +209,7 @@ def update_memory(id: str, content: str, reason: str) -> str:
 
 
 @tool
-def delete_memory(id: str, _reason: str) -> str:
+def delete_memory(id: str, reason: str) -> str:
     """根据 ID 删除一条记忆。
 
     Args:

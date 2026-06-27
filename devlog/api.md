@@ -71,6 +71,13 @@
   - F841: 删除未使用变量
 - **影响范围:** api 模块全部子包
 
+## 2026-06-28: 添加 SQLite 连接验证函数
+- **文件:**
+  - `api/database/__init__.py`
+- **原因:** Risk 1 — 在 SQLite 多线程场景下，提供连接有效性检查手段，增强健壮性
+- **决策:** 新增 `verify_connection()` 函数，内部执行 `SELECT 1` 探活，使用 try/except 包裹确保不抛异常
+- **影响范围:** api/database/__init__.py（新增函数，不改变现有行为）
+
 ## 2026-06-27: 统一错误处理中间件 + 类型注解完善
 - **文件:**
   - `api/middleware/error_handler.py` (new)

@@ -27,3 +27,13 @@ def close_connection():
     if hasattr(_local, "conn") and _local.conn is not None:
         _local.conn.close()
         _local.conn = None
+
+
+def verify_connection() -> bool:
+    """验证当前数据库连接是否有效。"""
+    try:
+        conn = get_connection()
+        conn.execute("SELECT 1")
+        return True
+    except Exception:
+        return False

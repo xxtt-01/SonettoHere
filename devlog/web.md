@@ -20,6 +20,15 @@
 - **决策:** 使用 Vitest（Vite 原生测试框架）+ happy-dom（轻量 DOM 环境），配置 @ 别名别名解析、localStorage/crypto 全局 mock
 - **影响范围:** web/ 前端项目，新增 devDependencies 和测试脚本入口
 
+## 2026-06-28: 添加 Icon 组件冒烟测试
+- **文件:**
+  - `web/src/__tests__/Icon.test.ts` (new)
+- **原因:** Risk 4 — 为前端 Icon 组件添加快速冒烟测试，验证渲染和尺寸样式
+- **决策:**
+  - 测试渲染：mount 后确认组件存在且内部 `<svg>` 元素已渲染
+  - 测试尺寸：验证父级 `<span>` 的 style 包含指定像素值（Icon.vue 将 size 应用于 span，svg 通过 100% 撑满）
+- **影响范围:** web/src/__tests__/（新增独立组件测试文件）
+
 ## 2026-06-27: 清理前端调试 console.log 语句
 - **文件:**
   - `web/src/components/ChatInput.vue`
