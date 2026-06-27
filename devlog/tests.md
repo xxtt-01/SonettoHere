@@ -40,3 +40,15 @@
   - TestConstSessionFileIO 使用 `@patch` 将 _CONST_DIR 替换为临时目录的 Path 对象，避免 MagicMock __truediv__ 复杂性
   - fixture 化 patched_const_dir 复用临时目录
 - **影响范围:** 测试 — tests 模块
+
+## 2026-06-27 22:11: API 路由基础测试（会话/健康检查）
+- **文件:**
+  - `tests/test_api/test_sessions_routes.py`
+  - `tests/test_api/test_health_routes.py`
+- **原因:** 覆盖会话 CRUD REST API 和健康检查端点，验证路由正确性
+- **决策:**
+  - 使用 FastAPI + ASGITransport + AsyncClient 隔离测试路由层
+  - sessions 路由使用真实 SessionManager 验证 CRUD 流程
+  - health 路由 mock 所有外部依赖（provider_manager、ltm、memory_path）
+  - 添加 autouse fixture 屏蔽 tiktoken SSL 错误和 memory.yaml 缺失问题
+- **影响范围:** 测试 — tests 模块，10 个测试全部通过
