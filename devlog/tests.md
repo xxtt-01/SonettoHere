@@ -30,3 +30,13 @@
   - 使用 pytest.mark.asyncio 测试异步任务跟踪
   - TTL=-1 模拟立即过期场景
 - **影响范围:** 测试 — tests 模块
+
+## 2026-06-27 官方时间: ConstSessionStore 单元测试
+- **文件:**
+  - `tests/test_api/test_const_session_store.py`
+- **原因:** 覆盖消息序列化/反序列化（7 个纯函数测试）和 YAML 文件 I/O（4 个 mock 测试），11 个测试全部通过
+- **决策:**
+  - TestMessageSerialization 测试纯函数，无需 mock
+  - TestConstSessionFileIO 使用 `@patch` 将 _CONST_DIR 替换为临时目录的 Path 对象，避免 MagicMock __truediv__ 复杂性
+  - fixture 化 patched_const_dir 复用临时目录
+- **影响范围:** 测试 — tests 模块
