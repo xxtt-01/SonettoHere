@@ -1,3 +1,14 @@
+## 2026-06-27 22:07: 前端响应式侧边栏 + 连接加载指示
+- **文件:**
+  - `web/src/App.vue`
+  - `web/src/components/ChatWindow.vue`
+  - `web/src/views/ChatView.vue`
+- **原因:** Phase 3 Task 2 & 3 — 小屏幕下侧边栏固定定位 + 滑动隐藏，WebSocket 未连接时显示加载状态
+- **决策:**
+  - 768px 以下侧边栏 fixed 定位，collapsed 时 translateX(-100%) 完全隐藏，main 区域占满宽度
+  - ChatWindow 新增可选 connected prop，未连接+无内容时显示旋转加载动画和"正在连接..."文字
+- **影响范围:** web/src/App.vue (CSS 媒体查询), web/src/components/ChatWindow.vue (loading 组件), web/src/views/ChatView.vue (传递 connected prop)
+
 ## 2026-06-27 22:07: 前端测试基础设施（Vitest + happy-dom）
 - **文件:**
   - `web/package.json`

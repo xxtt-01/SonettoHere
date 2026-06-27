@@ -652,4 +652,23 @@ html, body {
   margin-right: 6px;
   accent-color: var(--accent);
 }
+
+/* ── Responsive: narrow screens ── */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transition: transform 0.25s ease;
+  }
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+  }
+  .main {
+    margin-left: 0;
+    width: 100%;
+  }
+}
 </style>

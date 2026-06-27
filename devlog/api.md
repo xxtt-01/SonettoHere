@@ -1,3 +1,10 @@
+## 2026-06-27 22:07: 生产环境前端静态文件服务
+- **文件:**
+  - `api/server.py`
+- **原因:** Phase 3 Task 1 — Docker 镜像包含 web/dist/ 但服务器未挂载，导致生产环境无法访问前端
+- **决策:** 在 create_app() 末尾添加条件性 StaticFiles 挂载，仅 SONETTO_ENV=production 生效，不影响 Vite 开发模式
+- **影响范围:** api/server.py
+
 ## 2026-06-27: 默认启用 SQLite 会话存储模式
 - **文件:**
   - `api/server.py`

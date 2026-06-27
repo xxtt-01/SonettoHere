@@ -226,4 +226,18 @@ def create_app() -> FastAPI:
     # 认证中间件（在路由之后添加，确保只拦截 API/WS 路径）
     app.add_middleware(AuthMiddleware)
 
+    # 生产环境：挂载前端静态文件
+    if os.environ.get("SONETTO_ENV") == "production":
+        from fastapi.staticfiles import StaticFiles
+        from pathlib import Path
+
+        frontend_dist = Path(__file__).resolve().parent.parent / "web" / "dist"
+        if frontend_dist.exists():
+            app.mount(
+                "/",
+                StaticFiles(directory=str(frontend_dist), html=True),
+                name="frontend",
+            )
+            print(f"[server] Mounted frontend static files from {frontend_dist}")
+
     return app
