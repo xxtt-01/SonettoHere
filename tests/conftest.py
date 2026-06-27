@@ -48,23 +48,42 @@ def client(minimal_app: FastAPI) -> TestClient:
 
 @pytest.fixture
 def full_app() -> FastAPI:
-    """完整应用实例，Mock LLM 和文件系统以避免真实 API 调用。"""
+    """完整应用实例，Mock 所有外部依赖，不触发 lifespan。"""
     from unittest.mock import MagicMock
 
-    from api.server import create_app
+    from api.session_manager import SessionManager
 
-    app = create_app()
-    # Mock LLM 以避免真实 API 调用
+    app = FastAPI()
+
+    # Mock all app state
+    app.state.session_manager = SessionManager()
     app.state.llm = None
+    app.state.provider_manager = MagicMock()
+    app.state.provider_manager.count = 0
+    app.state.system_prompt = "Test system prompt"
+    app.state.native_tools = []
+    app.state.mcp_tools = []
+    app.state.tools = []
+    app.state.ws_registry = MagicMock()
+    app.state.ltm = MagicMock()
+    app.state.auth_token = "test-token"
+
+    # Mount core routes
+    from api.routes.sessions import router as sessions_router
+
+    app.include_router(sessions_router, prefix="/api")
+
+    # Health check
+    @app.get("/api/health")
+    async def health():
+        return {"status": "ok", "version": "test"}
+
     return app
 
 
 @pytest.fixture
 async def async_client(full_app: FastAPI) -> AsyncClient:
-    """异步 HTTP 客户端。"""
-    from asgi_lifespan import LifespanManager
-
+    """异步 HTTP 客户端（不触发 lifespan）。"""
     transport = ASGITransport(app=full_app)
-    async with LifespanManager(full_app):
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            yield client
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client

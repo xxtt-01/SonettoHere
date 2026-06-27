@@ -7,3 +7,16 @@
   - tests/conftest.py 保持向后兼容，新增 full_app（完整应用工厂，Mock LLM）和 async_client（异步 HTTP 客户端，支持 LifespanManager）
   - tests/test_api/conftest.py 使用懒导入避免依赖缺失导致收集失败
 - **影响范围:** 测试基础设施
+
+## 2026-06-27 22:11: fix: 代码审查问题修复
+- **文件:**
+  - `tests/conftest.py`
+  - `tests/test_api/conftest.py`
+  - `pyproject.toml`
+- **原因:** 修复代码质量审查发现的 5 个问题
+- **决策:**
+  - full_app fixture 改为手动创建 FastAPI app 并 Mock 所有外部依赖，不再触发真实 lifespan
+  - async_client 移除 LifespanManager 依赖（因 full_app 不再走 lifespan）
+  - test_api/conftest.py 添加类型注解，使用顶层导入
+  - pyproject.toml 移除 dev 中重复的 httpx
+- **影响范围:** 测试基础设施
