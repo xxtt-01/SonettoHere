@@ -106,3 +106,19 @@
   - 新增 `import_from_yaml` 静态方法支持一键迁移
   - 9 个测试覆盖三种模式 + YAML 导入，全量 214 测试无回归
 - **影响范围:** api/database/, api/providers/store.py, api/server.py, tests/
+
+## 2026-06-28: 修复 PR #194 审查发现的三个隐藏问题
+- **文件:**
+  - `api/server.py`
+  - `api/database/migrations/001_create_sessions.py`
+  - `api/session_manager.py`
+- **原因:** PR #194 深度审查发现 lifespan 中迁移在 SQLite 初始化之后运行（新部署会崩溃）、迁移 001 使用 julianday 而非 Unix 时间戳、get_or_create 不持久化到 SQLite
+- **根因:**
+  1. `lifespan()` 中 `run_migrations()` 放在 `SessionManager(mode="sqlite")` 之后，表未创建就查表
+  2. `session_messages.created_at DEFAULT (julianday('now'))` 返回儒略日而非 Unix 时间戳，与项目不一致
+  3. `get_or_create()` 创建 session 时只写内存不写 SQLite
+- **决策:**
+  1. 将 `run_migrations()` 移到 `lifespan()` 的绝对开头（#0）
+  2. `julianday('now')` 改为 `strftime('%s', 'now')` 与迁移 002 一致
+  3. `get_or_create()` 新建 session 时同步写入 `_db_store.save_session()`
+- **影响范围:** api/server.py, api/database/migrations/, api/session_manager.py

@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS session_messages (
     tool_name TEXT,
     tool_calls_json TEXT,
     additional_kwargs_json TEXT,
-    created_at REAL NOT NULL DEFAULT (julianday('now'))
+    created_at REAL NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 """
 

@@ -94,6 +94,17 @@ async def _load_const_sessions(app: FastAPI):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 0. 运行数据库迁移（在所有 SQLite 操作之前）
+    from api.database import get_connection as get_db_conn
+    from api.database.migrations import run_migrations
+    try:
+        db_conn = get_db_conn()
+        applied = run_migrations(db_conn)
+        if applied:
+            print(f"[db] Applied migrations: {applied}")
+    except Exception as e:
+        print(f"[db] Migration error (non-fatal): {e}")
+
     # 1. 初始化 Provider 管理器（SQLite 存储，支持从 YAML 导入）
     provider_store = ProviderConfigStore(mode="sqlite")
     if provider_store.is_empty:
@@ -131,17 +142,6 @@ async def lifespan(app: FastAPI):
         app.state.ltm.start_listening(app.state.llm, ws_registry=app.state.ws_registry)
     else:
         print("[ltm] Skipped (no LLM available)")
-
-    # 0. 运行数据库迁移
-    from api.database import get_connection as get_db_conn
-    from api.database.migrations import run_migrations
-    try:
-        db_conn = get_db_conn()
-        applied = run_migrations(db_conn)
-        if applied:
-            print(f"[db] Applied migrations: {applied}")
-    except Exception as e:
-        print(f"[db] Migration error (non-fatal): {e}")
 
     # 从 YAML 配置加载 MCP 工具
     app.state.mcp_tools = await init_mcp_tools()
