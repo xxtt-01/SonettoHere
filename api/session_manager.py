@@ -128,6 +128,13 @@ class SessionManager:
         if session is None:
             session = SessionState(session_id=session_id)
             self._sessions[session_id] = session
+            if self._db_store:
+                self._db_store.save_session(
+                    session_id=session_id,
+                    created_at=session.created_at,
+                    last_active=session.last_active,
+                    message_count=session.message_count,
+                )
         return session
 
     def delete(self, session_id: str) -> bool:
