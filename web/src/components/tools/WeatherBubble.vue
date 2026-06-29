@@ -542,7 +542,7 @@ const displayOutput = computed(() => {
 }
 .lf-alert-item {
   padding: 10px 12px;
-  border: 1px solid;
+  border-left: 3px solid;
   font-size: 12px;
   line-height: 1.5;
   background: var(--bg-primary);
