@@ -91,6 +91,33 @@
               <span class="rec-bar rec-bar-3"></span>
             </span>
           </button>
+          <button
+            class="btn-image-cog"
+            :class="{ active: imageRecognition }"
+            :disabled="disabled"
+            title="图像认知：开启后随消息发送图片给 LLM（图片引用将转为视觉输入）"
+            @click="$emit('toggleImageRecognition')"
+          >
+            <Icon name="image-cog" :size="18" />
+          </button>
+          <button
+            class="btn-memory"
+            :class="{ active: privateMode }"
+            :disabled="disabled"
+            :title="privateMode ? '私密模式已开启，记忆不会被记录' : '记忆模式，对话将保存到长期记忆'"
+            @click="$emit('togglePrivate')"
+          >
+            <Icon name="memory" :size="18" />
+          </button>
+          <button
+            class="btn-check"
+            :class="{ active: autoApprove }"
+            :disabled="disabled"
+            :title="autoApprove ? '自动执行：Python 代码将直接执行' : '审核模式：代码执行前需确认'"
+            @click="$emit('toggleAutoApprove')"
+          >
+            <Icon name="code" :size="18" />
+          </button>
         </div>
         <div class="input-right-group">
           <div class="dropdown">
@@ -150,18 +177,24 @@ import AutocompletePanel from '@/components/AutocompletePanel.vue'
 import Icon from '@/components/Icon.vue'
 import type { ProviderConfig, SkillInfo, ToolInfo } from '@/types'
 import type { ParsedRef } from '@/utils/references'
-import { REF_CHIP_CONFIG } from '@/utils/references'
+import { REF_CHIP_CONFIG, filterImageRefs } from '@/utils/references'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps<{
   isStreaming: boolean
   disabled: boolean
+  privateMode: boolean
+  autoApprove: boolean
+  imageRecognition: boolean
 }>()
 
 const emit = defineEmits<{
-  send: [text: string, refs: ParsedRef[], providerId?: string, modelName?: string]
+  send: [text: string, refs: ParsedRef[], providerId?: string, modelName?: string, imageRecognition?: boolean, imagePaths?: string[]]
   stop: []
   modelChange: [providerId: string, modelName: string]
+  togglePrivate: []
+  toggleAutoApprove: []
+  toggleImageRecognition: []
 }>()
 
 const text = ref('')
@@ -597,7 +630,20 @@ function handleSend() {
   const msg = text.value.trim()
   if (!msg || props.disabled) return
 
-  emit('send', msg, refs.value, selectedProviderId.value || undefined, selectedModelName.value || undefined)
+  let sendRefs = refs.value
+  let sendImageRecog = false
+  let imagePaths: string[] | undefined
+
+  if (props.imageRecognition) {
+    const { imageRefs, otherRefs } = filterImageRefs(refs.value)
+    if (imageRefs.length > 0) {
+      imagePaths = imageRefs.map(r => r.path)
+      sendRefs = otherRefs
+      sendImageRecog = true
+    }
+  }
+
+  emit('send', msg, sendRefs, selectedProviderId.value || undefined, selectedModelName.value || undefined, sendImageRecog, imagePaths)
   text.value = ''
   refs.value = []
   nextTick(() => autoResize())
@@ -1209,7 +1255,99 @@ function onResizeEnd(e: PointerEvent) {
   50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
 }
 
-/* 录音动画条 */
+/* ── 图像认知按钮 ── */
+.btn-image-cog {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.btn-image-cog:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.btn-image-cog:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.btn-image-cog.active {
+  background: color-mix(in srgb, #81ae92 12%, transparent);
+  color: #81ae92;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #81ae92 30%, transparent);
+}
+
+/* ── 记忆/私密模式按钮 ── */
+.btn-memory {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.btn-memory:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.btn-memory:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.btn-memory.active {
+  background: color-mix(in srgb, #81ae92 12%, transparent);
+  color: #81ae92;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #81ae92 30%, transparent);
+}
+
+/* ── 检查/自动执行按钮 ── */
+.btn-check {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.btn-check:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.btn-check:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.btn-check.active {
+  background: color-mix(in srgb, #81ae92 12%, transparent);
+  color: #81ae92;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #81ae92 30%, transparent);
+}
+
 .btn-mic-recording-icon {
   display: flex;
   align-items: center;
@@ -1296,7 +1434,7 @@ function onResizeEnd(e: PointerEvent) {
 .input-left-group {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
 }
 .input-right-group {
   display: flex;
