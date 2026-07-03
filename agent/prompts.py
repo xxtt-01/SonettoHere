@@ -12,7 +12,6 @@ ANTHROPIC_SKILLS_DIR = Path(__file__).resolve().parent.parent / "anthropic_skill
 MACROS_DIR = Path(__file__).resolve().parent.parent / "macros"
 
 
-@functools.lru_cache(maxsize=None)
 def _read_persona(filename: str) -> str:
     path = PERSONAS_DIR / filename
     if path.exists():

@@ -5,9 +5,10 @@
 - **决策:** 自动修复，遵循 ruff ARG001/ARG002 规则
 - **影响范围:** agent 模块
 
-## 2026-07-03: 提示词文件读取加 lru_cache
+## 2026-07-03: 提示词文件读取加 lru_cache（后修复 _read_persona 取消缓存）
 - **文件:**
   - `agent/prompts.py`
-- **原因:** `_read_persona()`、`_scan_anthropic_skills()`、`_scan_macros()` 每次 Agent turn 都重新读盘，冗余磁盘 I/O
-- **决策:** 对三个纯文件读取函数加 `@functools.lru_cache`，`_read_if_exists()` 不缓存（USER.md 可由 API 修改）
+- **原因:** `_scan_anthropic_skills()`、`_scan_macros()` 每次 Agent turn 重新扫描目录，冗余磁盘 I/O
+- **决策:** `_scan_anthropic_skills()` 和 `_scan_macros()` 加 `@functools.lru_cache`（目录扫描开销大且运行时不变）
+- **_read_persona 回退:** 最初三个函数都加了缓存，但 Persona API (PUT /api/persona) 会修改 SOUL.md，缓存导致更新不生效。移除 _read_persona 缓存，每次重新读盘（文件 ~6KB，性能影响可忽略）
 - **影响范围:** agent/prompts.py
