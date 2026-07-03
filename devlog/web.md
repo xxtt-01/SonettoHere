@@ -39,3 +39,10 @@
 - **原因:** Task 1.2.4 消除调试残留，减少生产环境控制台输出
 - **决策:** 将明确的调试日志注释为 `// TODO: dead?`，保留 console.error/warn 和 [useChat]/[useSession]/[ltm-fe] 前缀日志
 - **影响范围:** web/src/components/ 下 5 个 Vue 组件
+
+## 2026-07-03: 前端 manualChunks 分包 — vue/vue-router 拆分
+- **文件:**
+  - `web/vite.config.ts`
+- **原因:** Task 3 优化 — Vite 构建产物主 chunk 过大（647KB），将 vue + vue-router 分离为独立 vendor chunk
+- **决策:** 在 `build.rollupOptions.output.manualChunks` 中添加 `vendor-vue` 条目，将 `vue` 和 `vue-router` 打包到 `vendor-vue-*.js`
+- **影响范围:** web/vite.config.ts（仅新增 `build` 配置节），构建产物：vendor-vue chunk ~105kB，主 index chunk 降至 ~541kB
