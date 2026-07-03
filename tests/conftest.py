@@ -1,5 +1,15 @@
 """共享 fixtures — FastAPI TestClient、认证 Token、完整 app 工厂。"""
 
+import warnings
+
+# StarletteDeprecationWarning 继承自 UserWarning 而非 DeprecationWarning
+# 该警告提示 httpx → httpx2 迁移，是已知无害的过渡期警告
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message=r"Using `httpx` with `starlette\.testclient` is deprecated",
+)
+
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient

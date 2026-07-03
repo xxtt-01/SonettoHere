@@ -90,3 +90,11 @@
   - TestImportFromYaml：1 个测试验证 YAML→SQLite 一键导入
   - 使用临时目录 + patch DB_PATH 隔离测试数据库
 - **影响范围:** 测试 — tests 模块
+
+## 2026-07-03: 消除 StarletteDeprecationWarning
+- **文件:**
+  - `tests/conftest.py`
+- **原因:** Task 6 — 导入 `starlette.testclient.TestClient` 时触发 `StarletteDeprecationWarning`（httpx→httpx2 迁移警告）
+- **根因:** Starlette 的 `StarletteDeprecationWarning` 继承自 `UserWarning` 而非 `DeprecationWarning`，常规的 DeprecationWarning 过滤器无法捕获
+- **决策:** 在 import 前添加 `warnings.filterwarnings` 按 `category=UserWarning` 精确压制该警告，保留 `TestClient` 的同步 client fixture 不变（避免将 test_auth_middleware.py 全部改为异步的开销）
+- **影响范围:** 测试基础设施 — conftest.py
