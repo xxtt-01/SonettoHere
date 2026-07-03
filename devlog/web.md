@@ -46,3 +46,12 @@
 - **原因:** Task 3 优化 — Vite 构建产物主 chunk 过大（647KB），将 vue + vue-router 分离为独立 vendor chunk
 - **决策:** 在 `build.rollupOptions.output.manualChunks` 中添加 `vendor-vue` 条目，将 `vue` 和 `vue-router` 打包到 `vendor-vue-*.js`
 - **影响范围:** web/vite.config.ts（仅新增 `build` 配置节），构建产物：vendor-vue chunk ~105kB，主 index chunk 降至 ~541kB
+
+## 2026-07-03: Vue vendor chunk 代码分割 + TypeScript 类型修复
+- **文件:**
+  - `web/vite.config.ts`
+  - `web/src/components/tools/FilesBubble.vue`
+  - `web/src/components/tools/WeatherBubble.vue`
+- **原因:** 主 chunk 647KB 过大；vue-tsc 3 个 TS 类型错误
+- **决策:** vite.config.ts 添加 manualChunks 拆出 vendor-vue (105KB)；修复 computed 类型断言
+- **影响范围:** web/

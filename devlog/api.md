@@ -122,3 +122,9 @@
   2. `julianday('now')` 改为 `strftime('%s', 'now')` 与迁移 002 一致
   3. `get_or_create()` 新建 session 时同步写入 `_db_store.save_session()`
 - **影响范围:** api/server.py, api/database/migrations/, api/session_manager.py
+## 2026-07-03: 添加 sessions 表 cleanup 索引
+- **文件:**
+  - `api/database/migrations/003_add_sessions_indexes.py`
+- **原因:** `DELETE FROM sessions WHERE last_active < ? AND is_const = 0` 触发全表扫描
+- **决策:** 新增 migration 003，添加 `idx_sessions_cleanup(last_active, is_const)` 复合索引
+- **影响范围:** api/database/

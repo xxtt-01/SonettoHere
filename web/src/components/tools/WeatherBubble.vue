@@ -123,14 +123,14 @@ if (rawOutput) {
 
 // ── 数据源 ──
 const td = computed<WeatherData>(() => {
-  if (props.toolCall.toolData) return props.toolCall.toolData as WeatherData
+  if (props.toolCall.toolData) return props.toolCall.toolData as unknown as WeatherData
   if (props.toolCall.output) {
     try {
       const p = JSON.parse(props.toolCall.output)
       if (p?.data) return p.data as WeatherData
     } catch { /* ignore */ }
   }
-  return {}
+  return {} as WeatherData
 })
 
 const hasData = computed(() => Object.keys(td.value).length > 0)

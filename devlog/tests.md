@@ -98,3 +98,17 @@
 - **根因:** Starlette 的 `StarletteDeprecationWarning` 继承自 `UserWarning` 而非 `DeprecationWarning`，常规的 DeprecationWarning 过滤器无法捕获
 - **决策:** 在 import 前添加 `warnings.filterwarnings` 按 `category=UserWarning` 精确压制该警告，保留 `TestClient` 的同步 client fixture 不变（避免将 test_auth_middleware.py 全部改为异步的开销）
 - **影响范围:** 测试基础设施 — conftest.py
+
+## 2026-07-03: 消除 StarletteDeprecationWarning
+- **文件:**
+  - `tests/conftest.py`
+- **原因:** `starlette.testclient.TestClient` 导入触发 DeprecationWarning，建议改用 httpx2
+- **决策:** conftest.py 中添加 warnings.filterwarnings 压制（TestClient 仍需用于 test_auth_middleware.py 的同步测试）
+- **影响范围:** tests/
+
+## 2026-07-03: 数据库 sessions 表添加 cleanup 索引
+- **文件:**
+  - `api/database/migrations/003_add_sessions_indexes.py`
+- **原因:** `DELETE FROM sessions WHERE last_active < ? AND is_const = 0` 触发全表扫描
+- **决策:** 新增 migration 003，添加 `idx_sessions_cleanup(last_active, is_const)` 复合索引
+- **影响范围:** api/database/

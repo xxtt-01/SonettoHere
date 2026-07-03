@@ -1,8 +1,17 @@
 
-## 2026-07-03: 迁移 os.path 到 pathlib.Path（Task 7）
+## 2026-07-03: 修复安全沙箱 `_whitelisted_open` 编码问题
 - **文件:**
   - `tools/base.py`
-- **原因:** 消除 ruff PTH 警告，统一使用 pathlib 进行路径操作
+- **原因:** `_whitelisted_open()` 默认 encoding=None，中文 Windows (GBK) 下 LLM 生成代码读写 UTF-8 文件会崩溃
+- **决策:** 当 encoding 未指定且 mode 为非二进制时，默认使用 utf-8
+- **影响范围:** tools/base.py
+
+## 2026-07-03: 完成 `open()` → `Path.open()` 全面迁移
+- **文件:**
+  - `tools/base.py`
+- **原因:** 消除最后 6 个 PTH123 ruff 警告
+- **决策:** 6 处 `open(path, ...)` 改为 `path.open(...)`（path 已是 Path 对象）
+- **影响范围:** tools/base.py
 - **决策:**
   - `os.path.abspath()` → `str(Path(p).resolve())`
   - `os.path.normpath()` → `str(Path(p).resolve())`

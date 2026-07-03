@@ -184,9 +184,10 @@ def _ensure_whitelist() -> None:
 
     # 文件已存在，检查默认路径是否已在白名单中
     try:
-        with open(_WHITELIST_PATH, encoding="utf-8") as f:
+        with _WHITELIST_PATH.open(encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
         entries = raw.get("whitelist", [])
+
         if not isinstance(entries, list):
             _write_whitelist(_defaults)
             return
@@ -219,7 +220,7 @@ def _ensure_whitelist() -> None:
             changed = True
 
         if changed:
-            with open(_WHITELIST_PATH, "w", encoding="utf-8") as f:
+            with _WHITELIST_PATH.open("w", encoding="utf-8") as f:
                 yaml.dump(
                     {"whitelist": entries},
                     f,
@@ -257,7 +258,7 @@ def _write_whitelist(entries: list) -> None:
     content = {
         "whitelist": entries,
     }
-    with open(_WHITELIST_PATH, "w", encoding="utf-8") as f:
+    with _WHITELIST_PATH.open("w", encoding="utf-8") as f:
         # 写入手动头注释
         f.write("# 路径白名单（自动生成，首次 import 时创建）\n")
         f.write("# 编辑此文件以添加更多允许的路径前缀。\n")
@@ -290,7 +291,7 @@ def _ensure_blocker() -> None:
         return
 
     try:
-        with open(_BLOCKER_YAML_PATH, encoding="utf-8") as f:
+        with _BLOCKER_YAML_PATH.open(encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
         entries = raw.get("blockers", [])
         if not isinstance(entries, list):
@@ -310,7 +311,7 @@ def _ensure_blocker() -> None:
                     "description": "API 数据目录（自动生成）",
                 },
             )
-            with open(_BLOCKER_YAML_PATH, "w", encoding="utf-8") as f:
+            with _BLOCKER_YAML_PATH.open("w", encoding="utf-8") as f:
                 yaml.dump(
                     {"blockers": entries},
                     f,
@@ -341,7 +342,7 @@ def _load_path_whitelist() -> list[tuple[str, bool]]:
     读取失败时返回空列表（会触发 fail-secure 全阻断）。
     """
     try:
-        with open(_WHITELIST_PATH, encoding="utf-8") as f:
+        with _WHITELIST_PATH.open(encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
         entries = raw.get("whitelist", [])
         if not isinstance(entries, list):
