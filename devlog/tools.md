@@ -1,24 +1,15 @@
-## 2026-06-27: ruff 自动修复 — B007/SIM108/F841/N815/E741
+
+## 2026-07-03: 迁移 os.path 到 pathlib.Path（Task 7）
 - **文件:**
-  - `tools/__init__.py`
   - `tools/base.py`
-  - `tools/files/tool_file_edit.py`
-  - `tools/files/tool_file_read.py`
-  - `tools/map/map_api.py`
-  - `tools/mcp.py`
-  - `tools/memory/tool_merge_memories.py`
-  - `tools/memory/tool_update_memory.py`
-  - `tools/network/tavily/__init__.py`
-  - `tools/network/tavily/tool_extract.py`
-  - `tools/network/tavily/tool_search.py`
-  - `tools/sub_agent/tool_call_sub_agent.py`
-  - `tools/task/tool_tracker.py`
-  - `tools/todo/tool_list_labels.py`
-- **原因:** ruff lint 修复，Task 1.2.1
+- **原因:** 消除 ruff PTH 警告，统一使用 pathlib 进行路径操作
 - **决策:**
-  - B007: 循环未使用变量加 `_` 前缀
-  - SIM108: if-else 简化为三元
-  - F841: 删除未使用变量
-  - N815: 添加 `# noqa: N815` 到有意使用的驼峰字段
-  - E741: 模糊变量名 `l` → `label`
-- **影响范围:** tools 模块全部子包
+  - `os.path.abspath()` → `str(Path(p).resolve())`
+  - `os.path.normpath()` → `str(Path(p).resolve())`
+  - `os.path.isdir()` → `Path(p).is_dir()`
+  - `os.path.join()` → Path `/` 运算符
+  - `os.path.splitext()` → `Path.stem` / `Path.suffix`
+  - `os.listdir()` → `Path.iterdir()`
+  - `_PROJECT_ROOT` 等全局变量从 str 改为 Path，必要时用 `str()` 转换（如 YAML 序列化）
+- **影响范围:** `tools/base.py`，仅影响内部路径操作实现，不改变函数签名或外部行为
+- **测试:** 全部 214 个测试通过

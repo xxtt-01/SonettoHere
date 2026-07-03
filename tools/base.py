@@ -107,7 +107,7 @@ def check_sonetto_blocker(target_path: str) -> str | None:
     if not target_path:
         return None
 
-    abs_path = os.path.abspath(target_path)
+    abs_path = str(Path(target_path).resolve())
     p = Path(abs_path)
 
     # 收集待检查的所有目录层级
@@ -127,15 +127,15 @@ def check_sonetto_blocker(target_path: str) -> str | None:
     # 从根向下逐级检查
     seen: set[str] = set()
     for dir_path in reversed(dirs_to_check):
-        normalized = os.path.normpath(dir_path)
+        normalized = str(Path(dir_path).resolve())
         if normalized in seen:
             continue
         seen.add(normalized)
-        if not os.path.isdir(normalized):
+        if not Path(normalized).is_dir():
             continue
         try:
-            for entry in os.listdir(normalized):
-                entry_name, _ = os.path.splitext(entry)
+            for entry in Path(normalized).iterdir():
+                entry_name = entry.stem
                 if entry_name.lower() == "sonettoblocker":
                     # 返回友好的展示形式
                     return normalized
@@ -152,12 +152,10 @@ _WHITELIST_PATH = (
 )
 
 # 项目根目录：由 base.py 所在位置 (tools/base.py) 向上推一级
-_PROJECT_ROOT = os.path.normpath(
-    os.path.abspath(Path(__file__).resolve().parent.parent)
-)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # 默认白名单路径：仅暴露 anthropic_skills 和 macros 目录
-_DEFAULT_WHITELIST_PATH = os.path.join(_PROJECT_ROOT, "anthropic_skills")
-_DEFAULT_MACROS_WHITELIST_PATH = os.path.join(_PROJECT_ROOT, "macros")
+_DEFAULT_WHITELIST_PATH = _PROJECT_ROOT / "anthropic_skills"
+_DEFAULT_MACROS_WHITELIST_PATH = _PROJECT_ROOT / "macros"
 
 # ── 路径白名单 ──────────────────────────────────────────────
 
@@ -195,7 +193,7 @@ def _ensure_whitelist() -> None:
 
         changed = False
         for default_entry in _defaults:
-            target_path = os.path.normpath(os.path.abspath(default_entry["path"]))
+            target_path = str(Path(default_entry["path"]).resolve())
             target_desc = default_entry["description"]
             has_current = False
             auto_entry_idx = -1
@@ -203,7 +201,7 @@ def _ensure_whitelist() -> None:
             for i, entry in enumerate(entries):
                 if not isinstance(entry, dict) or "path" not in entry:
                     continue
-                entry_path = os.path.normpath(os.path.abspath(entry["path"]))
+                entry_path = str(Path(entry["path"]).resolve())
                 if entry_path == target_path:
                     has_current = True
                     break
@@ -236,7 +234,7 @@ def _ensure_whitelist() -> None:
 
 def _default_entry() -> dict:
     return {
-        "path": os.path.normpath(str(_DEFAULT_WHITELIST_PATH)),
+        "path": str(_DEFAULT_WHITELIST_PATH),
         "description": "技能目录（自动生成）",
         "recursive": True,
     }
@@ -244,7 +242,7 @@ def _default_entry() -> dict:
 
 def _default_macros_entry() -> dict:
     return {
-        "path": os.path.normpath(str(_DEFAULT_MACROS_WHITELIST_PATH)),
+        "path": str(_DEFAULT_MACROS_WHITELIST_PATH),
         "description": "宏目录（自动生成）",
         "recursive": True,
     }
@@ -271,7 +269,7 @@ _BLOCKER_YAML_PATH = (
 )
 
 _BLOCKER_FILENAME = "SonettoBlocker"
-_AUTO_BLOCKER_PATH = os.path.join(_PROJECT_ROOT, "api", "data")
+_AUTO_BLOCKER_PATH = _PROJECT_ROOT / "api" / "data"
 
 
 def _ensure_blocker() -> None:
@@ -281,7 +279,7 @@ def _ensure_blocker() -> None:
     - 如果 api/data/ 下没有 SonettoBlocker 标记文件 → 创建
     - 如果 sonetto_blocker.yaml 中没有对应条目 → 添加
     """
-    marker = Path(_AUTO_BLOCKER_PATH) / _BLOCKER_FILENAME
+    marker = _AUTO_BLOCKER_PATH / _BLOCKER_FILENAME
     if not marker.exists():
         try:
             marker.write_text("", encoding="utf-8")
@@ -298,17 +296,17 @@ def _ensure_blocker() -> None:
         if not isinstance(entries, list):
             return
 
-        normalized = os.path.normpath(_AUTO_BLOCKER_PATH)
+        normalized = str(_AUTO_BLOCKER_PATH.resolve())
         has_entry = any(
             isinstance(e, dict)
-            and os.path.normpath(os.path.abspath(e.get("path", ""))) == normalized
+            and str(Path(e.get("path", "")).resolve()) == normalized
             for e in entries
         )
         if not has_entry:
             entries.insert(
                 0,
                 {
-                    "path": _AUTO_BLOCKER_PATH,
+                    "path": str(_AUTO_BLOCKER_PATH),
                     "description": "API 数据目录（自动生成）",
                 },
             )
@@ -351,7 +349,7 @@ def _load_path_whitelist() -> list[tuple[str, bool]]:
         result: list[tuple[str, bool]] = []
         for entry in entries:
             if isinstance(entry, dict) and "path" in entry:
-                normalized = os.path.normpath(os.path.abspath(entry["path"]))
+                normalized = str(Path(entry["path"]).resolve())
                 recursive = entry.get("recursive", True)
                 if isinstance(recursive, bool):
                     result.append((normalized, recursive))
@@ -395,7 +393,7 @@ def check_path_whitelisted(target_path: str) -> str | None:
     if not target_path:
         return None
 
-    abs_target = os.path.normpath(os.path.abspath(target_path))
+    abs_target = str(Path(target_path).resolve())
     whitelist = _load_path_whitelist()
 
     if not whitelist:
@@ -467,6 +465,11 @@ def _whitelisted_open(
         blocked = check_path_whitelisted(file_str)
         if blocked:
             raise PermissionError(blocked)
+
+    # 当 encoding 未指定且非二进制模式时，默认使用 utf-8
+    # 避免 Windows 默认 GBK 导致 UnicodeDecodeError
+    if encoding is None and "b" not in mode:
+        encoding = "utf-8"
 
     return _real_builtins.open(
         file, mode, buffering, encoding, errors, newline, closefd, opener
