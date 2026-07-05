@@ -40,15 +40,49 @@ def read_version() -> int:
     return int(version)
 
 
-def git_pull() -> bool:
-    """执行 git pull，返回是否有新提交拉取。"""
-    print("[upgrade] git pull ...")
-    result = subprocess.run(
-        ["git", "pull"],
+def _is_connection_error(stderr: str) -> bool:
+    """判断 git 错误信息是否为网络连接问题。"""
+    keywords = [
+        "Failed to connect",
+        "Could not resolve host",
+        "Connection refused",
+        "Network is unreachable",
+        "Unable to access",
+        "Couldn't connect",
+        "连接失败",
+        "无法连接",
+        "网络不通",
+    ]
+    return any(k in stderr for k in keywords)
+
+
+def _run_git_pull(proxy: str | None = None) -> subprocess.CompletedProcess:
+    """执行 git pull，可选带代理。"""
+    cmd = ["git", "pull"]
+    if proxy:
+        cmd = ["git", "-c", f"http.proxy={proxy}", "-c", f"https.proxy={proxy}", "pull"]
+    return subprocess.run(
+        cmd,
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
     )
+
+
+def git_pull() -> bool:
+    """执行 git pull，返回是否有新提交拉取。"""
+    print("[upgrade] git pull ...")
+    result = _run_git_pull()
+
+    if result.returncode != 0 and _is_connection_error(result.stderr):
+        print(f"[upgrade] 连接失败，将通过代理重试。")
+        port = input("  代理端口（默认 7890，直接回车使用默认值）: ").strip()
+        if not port:
+            port = "7890"
+        proxy = f"http://127.0.0.1:{port}"
+        print(f"[upgrade] 尝试通过代理 {proxy} 拉取 ...")
+        result = _run_git_pull(proxy)
+
     if result.returncode != 0:
         print(f"[upgrade] git pull 失败:\n{result.stderr}")
         sys.exit(1)
