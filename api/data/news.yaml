@@ -1,11 +1,43 @@
 news:
+  - id: "v3.0.0-release"
+    title: "发布 v3.0.0 版本"
+    description: "v3.0.0完成了版本迁移的基础设施。Sonetto3的每一个版本都可以通过双击根目录的upgrade.bat升级到GitHub主分支最新版本。那么在明媚歌声的尽头，请别再停留。"
+    type: "feat"
+    date: "2026-07-05"
+    tags: ["发布", "版本", "配置"]
+    version: "v3.0.0"
+    pr_number: 226
+  - id: "minute-precipitation"
+    title: "分钟级降水预报上线"
+    description: "天气工具新增分钟级降水预报展示。后端将 ~120 个降水数据点自动压缩为连续降水区间摘要，携带强度分级和持续时间；前端工具气泡新增降水信息栏，展示时间范围、强度色条和降水量。原始点数据对 LLM 透明，简化理解。"
+    type: "enhance"
+    date: "2026-06-26"
+    tags: ["天气", "降水", "UI"]
+    version: "v2.8.0"
+    pr_number: 196
+  - id: "todoist-bubble-wireframe"
+    title: "Todoist 气泡线框化重构"
+    description: "Todoist 工具气泡全面重构为 6 个独立子组件，全线框黑白配色。包括项目树、任务列表（p1-p4 灰度优先级）、任务详情（2×2 网格信息卡）、操作结果（创建/完成/删除/更新四变体）、分区列表和标签网格，视觉风格统一清晰。"
+    type: "refactor"
+    date: "2026-06-21"
+    tags: ["Todoist", "UI", "重构"]
+    version: "v2.5.0"
+    pr_number: 172
+  - id: "memory-real-time-events"
+    title: "记忆操作实时追踪"
+    description: "后台记忆 consumer 通过 WebSocket 实时推送记忆操作事件到前端，每轮对话底部显示记忆操作日志。新增 MemoryToolCallback 将 CRUD 工具调用转为事件流，turn_id 关联确保事件准确归属对话轮次，无修改时自动显示「记忆检查 — 无需修改」。"
+    type: "feat"
+    date: "2026-06-20"
+    tags: ["记忆", "实时", "WebSocket", "UI"]
+    version: "v2.5.0"
+    pr_number: 166
   - id: "model-vision-detection"
     title: "视觉能力自动检测"
     description: "后端自动检测每个模型的视觉能力，在提供商管理页面和顶部栏直观显示当前模型是否支持多模态输入。无视觉模型时输入框提示闪烁引导用户切换模型，简化多模态体验的发现与配置。"
     type: "feat"
     date: "2026-07-02"
     tags: ["视觉", "多模态", "检测", "UI"]
-    version: ""
+    version: "v3.0.0"
     pr_number: 205
   - id: "v2.8.0-release"
     title: "发布 v2.8.0 版本"
@@ -14,7 +46,7 @@ news:
     date: "2026-07-01"
     tags: ["发布", "版本"]
     version: "v2.8.0"
-    pr_number: 0
+    pr_number: 203
   - id: "voice-input"
     title: "语音输入功能上线"
     description: "输入框新增语音输入按钮，长按按钮或长按空格键即可激活 Web Speech API 进行语音识别，识别结果自动填入输入框，释放双手提升输入效率。"
@@ -134,7 +166,7 @@ news:
     date: "2026-06-19"
     tags: ["发布", "版本"]
     version: "v2.2.0"
-    pr_number: 0
+    pr_number: 129
   - id: "chat-input-resize-handle"
     title: "输入框拖拽调整高度"
     description: "ChatInput 文本输入框顶部新增拖拽手柄，hover 时显示蓝色横线。使用 Pointer Events 实现流畅拖拽，容器高度可在默认高度到 600px 之间自由调整，拖拽后高度自动保持不受输入内容影响。"
@@ -158,7 +190,7 @@ news:
     date: "2026-06-16"
     tags: ["发布", "版本"]
     version: "v2.0.0"
-    pr_number: 0
+    pr_number: 114
   - id: "unified-provider-management"
     title: "提供商管理全面升级"
     description: "彻底移除 .env 模型配置，所有 LLM 提供商统一由 providers.yaml 通过前端 UI 管理。ProviderConfig 新增 context_window 字段，前端无提供商时友好提示引导配置。告别 .env 手动修改模型参数。"
