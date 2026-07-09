@@ -43,7 +43,7 @@ def _parse_frontmatter(text: str) -> dict[str, str]:
     return meta
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _scan_anthropic_skills() -> str:
     """扫描 anthropic_skills/ 下所有 SKILL.md，返回元数据清单。"""
     if not ANTHROPIC_SKILLS_DIR.is_dir():
@@ -71,7 +71,7 @@ def _scan_anthropic_skills() -> str:
     return "\n".join(lines)
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _scan_macros() -> str:
     """扫描 macros/ 下所有 MACRO.md，返回元数据清单。"""
     if not MACROS_DIR.is_dir():
