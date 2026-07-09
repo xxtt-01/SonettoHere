@@ -128,3 +128,21 @@
 - **原因:** `DELETE FROM sessions WHERE last_active < ? AND is_const = 0` 触发全表扫描
 - **决策:** 新增 migration 003，添加 `idx_sessions_cleanup(last_active, is_const)` 复合索引
 - **影响范围:** api/database/
+
+## 2026-07-09: 数据库连接在服务器关闭时释放
+- **文件:** `api/server.py`
+- **原因:** `close_connection()` 从未被调用，关闭时连接未释放、WAL 文件可能残留
+- **决策:** server.py lifespan yield 后调用 `close_connection()`，确保优雅关闭
+- **影响范围:** api/server.py
+
+## 2026-07-09: 修复 WebSocket 断开时 interaction Future 泄漏
+- **文件:** `api/routes/chat.py`
+- **原因:** WebSocket finally 块未调用 `interaction.cancel_all()`，ask_user 等交互 Future 残留 _pending 字典
+- **决策:** finally 块添加 `interaction.cancel_all()`，CancelledError 处理器先触发一次（带特定原因），finally 二次触发为空操作
+- **影响范围:** api/routes/chat.py
+
+## 2026-07-09: 简化 cancel_all() 迭代逻辑
+- **文件:** `api/interaction.py`
+- **原因:** 原来 list+pop 模式冗余，每次 pop 单独操作
+- **决策:** 统一遍历 values 后一次性 _pending.clear()
+- **影响范围:** api/interaction.py

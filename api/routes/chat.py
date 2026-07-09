@@ -544,6 +544,8 @@ async def websocket_chat(ws: WebSocket, session_id: str):
     except WebSocketDisconnect:
         pass  # 客户端断开是正常行为
     finally:
+        # 清理交互 Future + WebSocket + Agent Task
+        interaction.cancel_all()
         app_state.ws_registry.unregister(session_id)
         if agent_task and not agent_task.done():
             agent_task.cancel()

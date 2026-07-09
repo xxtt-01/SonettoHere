@@ -22,3 +22,8 @@
   - `_PROJECT_ROOT` 等全局变量从 str 改为 Path，必要时用 `str()` 转换（如 YAML 序列化）
 - **影响范围:** `tools/base.py`，仅影响内部路径操作实现，不改变函数签名或外部行为
 - **测试:** 全部 214 个测试通过
+## 2026-07-09: 补充 get_safe_builtins 安全边界文档
+- **文件:** `tools/base.py`
+- **原因:** 沙箱仅防护 open()，os.open/subprocess 可绕过，需明确告知开发者
+- **决策:** 在 docstring 添加 caution 块，说明 LLM 信任环境的设计约束
+- **影响范围:** tools/base.py

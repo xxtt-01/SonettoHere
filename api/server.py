@@ -159,6 +159,9 @@ async def lifespan(app: FastAPI):
     # 关闭：清理资源
     await close_mcp()
     await app.state.ltm.stop_listening()
+    from api.database import close_connection
+
+    close_connection()
 
 
 def create_app() -> FastAPI:

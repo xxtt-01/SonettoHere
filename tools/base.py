@@ -483,6 +483,12 @@ def get_safe_builtins() -> dict:
     保留全部内置函数（包括 ``__import__``、``eval`` 等），
     仅将 ``open()`` 替换为经过 ``check_path_whitelisted()``
     审查的包装版本。日常计算、模块导入、调试等功能均不受影响。
+
+    .. caution::
+        此沙箱仅防护 ``open()`` 路径访问。``import os`` 后可通过
+        ``os.open()``、``os.popen()`` 或 ``subprocess`` 等模块
+        绕过白名单检查。这是设计约束 — LLM 信任环境不应包含
+        对抗性代码执行场景。
     """
     # 在非 __main__ 模块中，__builtins__ 是模块对象而非 dict
     source = (

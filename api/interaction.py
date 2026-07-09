@@ -56,7 +56,7 @@ def cancel_all(reason: str | None = None):
     if reason is None:
         reason = "用户取消了该工具调用"
     formatted = format_error(reason)
-    for interaction_id, future in list(_pending.items()):
+    for future in _pending.values():
         if not future.done():
             future.set_result(formatted)
-        _pending.pop(interaction_id, None)
+    _pending.clear()
