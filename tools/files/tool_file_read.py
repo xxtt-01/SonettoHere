@@ -1,6 +1,6 @@
 """Tool: file_read — 读取文件内容。"""
 
-import os
+from pathlib import Path
 
 from pydantic import BaseModel, Field
 
@@ -32,17 +32,19 @@ class FileReadTool(ToolBase):
         if err:
             return format_error(err)
 
-        if not os.path.exists(file_path):
+        p = Path(file_path)
+        if not p.exists():
             return format_error(f"文件不存在: {file_path}")
-        if not os.path.isfile(file_path):
+        if not p.is_file():
             return format_error(f"路径不是文件: {file_path}")
 
-        with open(file_path, encoding="utf-8") as f:
+        with p.open(encoding="utf-8") as f:
             data = f.read()
 
-        st = os.stat(file_path)
+        st = p.stat()
+        abs_path = str(p.resolve())
         return format_success({
             "content": data,
-            "file_path": os.path.abspath(file_path),
-            "file_info": {"size": st.st_size, "path": os.path.abspath(file_path)},
+            "file_path": abs_path,
+            "file_info": {"size": st.st_size, "path": abs_path},
         })

@@ -1,8 +1,8 @@
 """Tool: file_edit — 文件精确编辑工具（基于 Claude Code Edit 工具模式）。"""
 
 import json
-import os
 import re
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -99,20 +99,21 @@ class FileEditTool(ToolBase):
             return format_error(blocked)
         # ────────────────────────────────────────────────────────────
 
-        if not os.path.exists(file_path):
+        p = Path(file_path)
+        if not p.exists():
             return format_error(f"文件不存在: {file_path}")
-        if not os.path.isfile(file_path):
+        if not p.is_file():
             return format_error(f"不是文件: {file_path}")
 
         try:
             if operation == "read":
-                return self._read(file_path, offset, limit)
+                return self._read(p)
             elif operation == "edit":
-                return self._edit(file_path, old_string, new_string, replace_all)
+                return self._edit(p, old_string, new_string, replace_all)
             elif operation == "multi_edit":
-                return self._multi_edit(file_path, edits)
+                return self._multi_edit(p, edits)
             elif operation == "search":
-                return self._search(file_path, pattern, case_insensitive)
+                return self._search(p, pattern, case_insensitive)
             else:
                 return format_error(f"未知操作: {operation}")
         except Exception as e:
@@ -120,8 +121,8 @@ class FileEditTool(ToolBase):
 
     # ── Read ──────────────────────────────────────────────────────
 
-    def _read(self, file_path: str, offset: int = 0, limit: int = 0) -> str:
-        with open(file_path, encoding="utf-8") as f:
+    def _read(self, p: Path, offset: int = 0, limit: int = 0) -> str:
+        with p.open(encoding="utf-8") as f:
             lines = f.readlines()
 
         total_lines = len(lines)
@@ -131,7 +132,7 @@ class FileEditTool(ToolBase):
 
         return format_success(
             {
-                "file_path": os.path.abspath(file_path),
+                "file_path": str(p.resolve()),
                 "total_lines": total_lines,
                 "offset": start,
                 "limit": end - start,
@@ -147,14 +148,14 @@ class FileEditTool(ToolBase):
 
     def _edit(
         self,
-        file_path: str,
+        p: Path,
         old_string: str,
         new_string: str,
         replace_all: bool = False,
     ) -> str:
         if not old_string:
             return format_error("edit 操作需要提供 old_string")
-        with open(file_path, encoding="utf-8") as f:
+        with p.open(encoding="utf-8") as f:
             content = f.read()
 
         count = content.count(old_string)
@@ -167,12 +168,12 @@ class FileEditTool(ToolBase):
             )
 
         new_content = content.replace(old_string, new_string, -1 if replace_all else 1)
-        with open(file_path, "w", encoding="utf-8") as f:
+        with p.open("w", encoding="utf-8") as f:
             f.write(new_content)
 
         return format_success(
             {
-                "file_path": os.path.abspath(file_path),
+                "file_path": str(p.resolve()),
                 "replaced_count": count if replace_all else 1,
                 "replace_all": replace_all,
                 "total_lines": new_content.count("\n") + 1,
@@ -182,7 +183,7 @@ class FileEditTool(ToolBase):
 
     # ── Multi-Edit ───────────────────────────────────────────────
 
-    def _multi_edit(self, file_path: str, edits_json: str) -> str:
+    def _multi_edit(self, p: Path, edits_json: str) -> str:
         if not edits_json:
             return format_error("multi_edit 操作需要提供 edits（JSON 字符串）")
 
@@ -194,7 +195,7 @@ class FileEditTool(ToolBase):
         if not isinstance(edit_list, list) or not edit_list:
             return format_error("edits 应为非空 JSON 数组")
 
-        with open(file_path, encoding="utf-8") as f:
+        with p.open(encoding="utf-8") as f:
             content = f.read()
 
         results: list[dict[str, Any]] = []
@@ -228,13 +229,13 @@ class FileEditTool(ToolBase):
                 {"index": i, "status": "ok", "replaced_count": count if all_ else 1}
             )
 
-        with open(file_path, "w", encoding="utf-8") as f:
+        with p.open("w", encoding="utf-8") as f:
             f.write(content)
 
         success_count = sum(1 for r in results if r["status"] == "ok")
         return format_success(
             {
-                "file_path": os.path.abspath(file_path),
+                "file_path": str(p.resolve()),
                 "total_edits": len(edit_list),
                 "success_count": success_count,
                 "failed_count": len(edit_list) - success_count,
@@ -245,7 +246,7 @@ class FileEditTool(ToolBase):
     # ── Search ───────────────────────────────────────────────────
 
     def _search(
-        self, file_path: str, pattern: str, case_insensitive: bool = False
+        self, p: Path, pattern: str, case_insensitive: bool = False
     ) -> str:
         if not pattern:
             return format_error("search 操作需要提供 pattern")
@@ -259,7 +260,7 @@ class FileEditTool(ToolBase):
         except re.error as e:
             return format_error(f"正则表达式错误: {e}")
 
-        with open(file_path, encoding="utf-8") as f:
+        with p.open(encoding="utf-8") as f:
             lines = f.readlines()
 
         matches: list[dict[str, Any]] = []
@@ -275,7 +276,7 @@ class FileEditTool(ToolBase):
 
         return format_success(
             {
-                "file_path": os.path.abspath(file_path),
+                "file_path": str(p.resolve()),
                 "pattern": pattern,
                 "total_matches": len(matches),
                 "matches": matches,

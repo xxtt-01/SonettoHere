@@ -1,7 +1,7 @@
 """Tool: file_manage — 管理文件和目录（删除/重命名/创建目录）。"""
 
-import os
 import shutil
+from pathlib import Path
 
 from pydantic import BaseModel, Field
 
@@ -65,17 +65,18 @@ class FileManageTool(ToolBase):
     def _delete_file(self, file_path: str) -> str:
         if not file_path:
             return format_error("删除文件需要提供 file_path")
-        if not os.path.exists(file_path):
+        p = Path(file_path)
+        if not p.exists():
             return format_error(f"文件不存在: {file_path}")
 
         err = self._check(file_path)
         if err:
             return err
 
-        if os.path.isfile(file_path):
-            os.remove(file_path)
-        elif os.path.isdir(file_path):
-            shutil.rmtree(file_path)
+        if p.is_file():
+            p.unlink()
+        elif p.is_dir():
+            shutil.rmtree(str(p))
         else:
             return format_error(f"未知的文件类型: {file_path}")
 
@@ -89,9 +90,11 @@ class FileManageTool(ToolBase):
             return format_error("重命名需要提供 file_path")
         if not new_path:
             return format_error("重命名需要提供 new_path")
-        if not os.path.exists(file_path):
+        src = Path(file_path)
+        dst = Path(new_path)
+        if not src.exists():
             return format_error(f"文件不存在: {file_path}")
-        if os.path.exists(new_path):
+        if dst.exists():
             return format_error(f"目标已存在: {new_path}")
 
         for p in (file_path, new_path):
@@ -99,7 +102,7 @@ class FileManageTool(ToolBase):
             if err:
                 return format_error(err)
 
-        os.rename(file_path, new_path)
+        src.rename(str(dst))
         return format_success({
             "message": f"已重命名: {file_path} → {new_path}",
             "old_path": file_path,
@@ -114,8 +117,9 @@ class FileManageTool(ToolBase):
         if err:
             return err
 
-        os.makedirs(directory_path, exist_ok=True)
+        p = Path(directory_path)
+        p.mkdir(parents=True, exist_ok=True)
         return format_success({
             "message": f"目录已创建: {directory_path}",
-            "directory_path": os.path.abspath(directory_path),
+            "directory_path": str(p.resolve()),
         })

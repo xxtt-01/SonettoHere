@@ -1,6 +1,6 @@
 """Tool: file_write — 写入/创建文件内容。"""
 
-import os
+from pathlib import Path
 
 from pydantic import BaseModel, Field
 
@@ -37,16 +37,17 @@ class FileWriteTool(ToolBase):
         if err:
             return format_error(err)
 
-        directory = os.path.dirname(file_path)
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory, exist_ok=True)
+        p = Path(file_path)
+        parent = p.parent
+        if not parent.exists():
+            parent.mkdir(parents=True, exist_ok=True)
 
-        with open(file_path, "w", encoding="utf-8") as f:
+        with p.open("w", encoding="utf-8") as f:
             f.write(content)
 
         return format_success({
             "message": f"文件已写入: {file_path}",
-            "file_path": os.path.abspath(file_path),
+            "file_path": str(p.resolve()),
             "size": len(content),
             "line_count": content.count("\n") + 1,
         })

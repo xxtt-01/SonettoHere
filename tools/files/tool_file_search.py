@@ -1,7 +1,6 @@
 """Tool: file_search — 列出目录内容、搜索文件。"""
 
-import glob
-import os
+from pathlib import Path
 
 from pydantic import BaseModel, Field
 
@@ -67,9 +66,10 @@ class FileSearchTool(ToolBase):
     def _list_directory(self, directory_path: str) -> str:
         if not directory_path:
             directory_path = "."
-        if not os.path.exists(directory_path):
+        dp = Path(directory_path)
+        if not dp.exists():
             return format_error(f"目录不存在: {directory_path}")
-        if not os.path.isdir(directory_path):
+        if not dp.is_dir():
             return format_error(f"路径不是目录: {directory_path}")
 
         err = check_path_access(directory_path)
@@ -77,21 +77,19 @@ class FileSearchTool(ToolBase):
             return format_error(err)
 
         items = []
-        for item in os.listdir(directory_path):
-            item_path = os.path.join(directory_path, item)
-            st = os.stat(item_path)
+        for fp in dp.iterdir():
             items.append({
-                "name": item,
-                "path": item_path,
-                "is_file": os.path.isfile(item_path),
-                "is_dir": os.path.isdir(item_path),
-                "size": st.st_size if os.path.isfile(item_path) else 0,
+                "name": fp.name,
+                "path": str(fp),
+                "is_file": fp.is_file(),
+                "is_dir": fp.is_dir(),
+                "size": fp.stat().st_size if fp.is_file() else 0,
             })
 
         items.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
 
         return format_success({
-            "directory": os.path.abspath(directory_path),
+            "directory": str(dp.resolve()),
             "items": items,
             "count": len(items),
             "file_count": sum(1 for i in items if i["is_file"]),
@@ -110,45 +108,43 @@ class FileSearchTool(ToolBase):
             pattern = "*"
         if not directory:
             directory = "."
+        if not Path(directory).exists():
+            return format_error(f"搜索目录不存在: {directory}")
 
         err = check_path_access(directory)
         if err:
             return format_error(err)
 
-        if not os.path.exists(directory):
-            return format_error(f"搜索目录不存在: {directory}")
+        search_dir = Path(directory)
+        glob_pattern = "**/" + pattern if recursive else pattern
 
-        search_path = (
-            os.path.join(directory, "**", pattern)
-            if recursive
-            else os.path.join(directory, pattern)
-        )
         found = []
-        for fp in glob.glob(search_path, recursive=recursive):
-            if file_filter == "files_only" and not os.path.isfile(fp):
+        for fp in sorted(search_dir.glob(glob_pattern)):
+            if file_filter == "files_only" and not fp.is_file():
                 continue
-            if file_filter == "directories_only" and not os.path.isdir(fp):
+            if file_filter == "directories_only" and not fp.is_dir():
                 continue
             if (
                 file_filter == "by_extension"
                 and extension
-                and not fp.lower().endswith(extension.lower())
+                and not fp.suffix.lower() == extension.lower()
+                and not fp.name.lower().endswith(extension.lower())
             ):
                 continue
 
-            st = os.stat(fp)
+            st = fp.stat()
             found.append({
-                "path": fp,
-                "name": os.path.basename(fp),
-                "is_file": os.path.isfile(fp),
-                "is_dir": os.path.isdir(fp),
-                "size": st.st_size if os.path.isfile(fp) else 0,
+                "path": str(fp),
+                "name": fp.name,
+                "is_file": fp.is_file(),
+                "is_dir": fp.is_dir(),
+                "size": st.st_size if fp.is_file() else 0,
             })
 
         found.sort(key=lambda x: x["path"].lower())
         return format_success({
             "search_pattern": pattern,
-            "search_directory": os.path.abspath(directory),
+            "search_directory": str(search_dir.resolve()),
             "recursive": recursive,
             "file_filter": file_filter,
             "found_files": found,

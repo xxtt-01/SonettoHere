@@ -1,6 +1,5 @@
 """REST API — 路径白名单 (path_whitelist.yaml) CRUD。"""
 
-import os
 from pathlib import Path
 
 import yaml
@@ -59,7 +58,7 @@ async def list_whitelist():
 async def add_whitelist(entry: WhitelistEntry):
     entries = _load()
     data = entry.model_dump()
-    data["path"] = os.path.normpath(data["path"])
+    data["path"] = str(Path(data["path"]).resolve())
     entries.append(data)
     _save(entries)
     return WhitelistEntry(**data)
@@ -71,7 +70,7 @@ async def update_whitelist(index: int, entry: WhitelistEntry):
     if index < 0 or index >= len(entries):
         raise HTTPException(status_code=404, detail=f"索引 {index} 超出范围")
     data = entry.model_dump()
-    data["path"] = os.path.normpath(data["path"])
+    data["path"] = str(Path(data["path"]).resolve())
     entries[index] = data
     _save(entries)
     return WhitelistEntry(**data)
