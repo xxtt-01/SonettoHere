@@ -19,7 +19,7 @@
           <div class="card-header">
             <div class="card-title-row">
               <span class="card-label">{{ p.label }}</span>
-              <span v-if="p.is_default_provider" class="default-star" title="默认供应商">⭐</span>
+              <span v-if="p.is_default_provider" class="default-provider-badge">默认</span>
               <span class="card-type-badge">OPENAI</span>
             </div>
             <button
@@ -38,16 +38,10 @@
             <div class="card-models-title">模型（{{ p.models.length }}）</div>
             <div class="card-models-tags">
               <span v-for="m in p.models" :key="m" class="model-tag" :class="{ 'default-model-tag': m === p.default_model }">
-                {{ m }}<span v-if="m === p.default_model" class="default-model-star" title="默认模型">⭐</span>
-                <Icon v-if="p.model_vision?.[m] === true" name="image-cog" :size="12" class="vision-dot" title="支持视觉" />
+                {{ m }}<span v-if="p.model_context_windows?.[m]" class="ctx-badge">{{ fmtCtx(p.model_context_windows[m]) }}</span><Icon v-if="p.model_vision?.[m] === true" name="image-cog" :size="12" class="vision-dot" title="支持视觉" />
               </span>
               <span v-if="p.models.length === 0" class="model-tag empty">未配置</span>
             </div>
-          </div>
-
-          <!-- 上下文窗口 -->
-          <div class="card-context-window">
-            上下文窗口: {{ (p.context_window ?? 256000).toLocaleString() }} tokens
           </div>
 
           <!-- 测试结果 -->
@@ -95,11 +89,6 @@
         <input v-model="form.base_url" class="input mono" placeholder="https://api.deepseek.com" />
       </div>
 
-      <div class="form-section">
-        <label class="form-label">Context Window (tokens)</label>
-        <input v-model.number="form.context_window" class="input mono" type="number" placeholder="256000" />
-      </div>
-
       <!-- 默认供应商 -->
       <div v-if="isEditing" class="form-section">
         <label class="form-label checkbox-label">
@@ -130,7 +119,7 @@
           <div v-for="m in discoveredModels" :key="m" class="model-item" :class="{ 'default-model-item': form.defaultModel === m }">
             <label class="model-checkbox-label">
               <input type="checkbox" :value="m" :checked="selectedModels.includes(m)" @change="toggleModel(m)" />
-              <span class="model-name-text">{{ m }}</span>
+              <span class="model-name-text">{{ m }}<span v-if="modelContextWindows[m]" class="ctx-badge">{{ fmtCtx(modelContextWindows[m]) }}</span></span>
               <span v-if="editingModelVision[m] === true" class="vision-badge">视觉</span>
               <span v-else-if="editingModelVision[m] === false" class="vision-badge no-vision">无视觉</span>
             </label>
@@ -163,7 +152,7 @@
 <script setup lang="ts">
 import { api } from '@/api'
 import type { ProviderConfig, TestConnectionResponse } from '@/types'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import Icon from '@/components/Icon.vue'
 
 // ── 预设提供商列表 ──
@@ -184,7 +173,7 @@ const providers = ref<ProviderConfig[]>([])
 const loading = ref(false)
 
 // ── 表单 ──
-const form = ref({ id: '', provider_type: 'deepseek', label: '', api_key: '', base_url: '', context_window: 256000, isDefaultProvider: false, defaultModel: null as string | null })
+const form = ref({ id: '', provider_type: 'deepseek', label: '', api_key: '', base_url: '', isDefaultProvider: false, defaultModel: null as string | null })
 const isEditing = computed(() => mode.value === 'edit')
 const editingId = ref('')
 const defaultModelWarning = ref('')
@@ -200,8 +189,13 @@ function onPresetChange(newType: string) {
   }
 }
 // watch provider_type
-import { watch } from 'vue'
 watch(() => form.value.provider_type, onPresetChange)
+
+// ── 上下文窗口格式化 ──
+function fmtCtx(ctx: number): string {
+  if (ctx >= 1_000_000) return (ctx / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M'
+  return Math.round(ctx / 1000).toLocaleString() + 'K'
+}
 
 // ── 测试连接 ──
 const testing = ref(false)
@@ -239,6 +233,9 @@ const selectedModels = ref<string[]>([])
 // ── 视觉能力 ──
 const editingModelVision = ref<Record<string, boolean>>({})
 
+// ── 上下文窗口（拉取后缓存） ──
+const modelContextWindows = ref<Record<string, number>>({})
+
 async function handleDiscover() {
   discovering.value = true
   formError.value = ''
@@ -248,6 +245,7 @@ async function handleDiscover() {
       const res = await api.discoverModelsForExisting(editingId.value)
       discoveredModels.value = res.models
       selectedModels.value = [...res.models]
+      modelContextWindows.value = res.model_context_windows ?? {}
       if (res.default_model_warning) {
         defaultModelWarning.value = res.default_model_warning
         form.value.defaultModel = null
@@ -259,6 +257,7 @@ async function handleDiscover() {
       })
       discoveredModels.value = res.models
       selectedModels.value = [...res.models]
+      modelContextWindows.value = res.model_context_windows ?? {}
     }
   } catch (e: any) {
     formError.value = e.message
@@ -298,11 +297,12 @@ async function loadProviders() {
 
 function startAdd() {
   mode.value = 'add'
-  form.value = { id: '', provider_type: 'deepseek', label: '', api_key: '', base_url: presetBaseUrl('deepseek'), context_window: 256000, isDefaultProvider: false, defaultModel: null }
+  form.value = { id: '', provider_type: 'deepseek', label: '', api_key: '', base_url: presetBaseUrl('deepseek'), isDefaultProvider: false, defaultModel: null }
   discoveredModels.value = []
   selectedModels.value = []
   editingModelVision.value = {}
   defaultModelWarning.value = ''
+  modelContextWindows.value = {}
   formError.value = ''
   testOk.value = false
 }
@@ -316,7 +316,6 @@ function startEdit(p: ProviderConfig) {
     label: p.label,
     api_key: '',
     base_url: p.base_url,
-    context_window: p.context_window ?? 256000,
     isDefaultProvider: p.is_default_provider ?? false,
     defaultModel: p.default_model ?? null,
   }
@@ -324,6 +323,7 @@ function startEdit(p: ProviderConfig) {
   selectedModels.value = [...p.models]
   editingModelVision.value = p.model_vision ?? {}
   defaultModelWarning.value = ''
+  modelContextWindows.value = p.model_context_windows ?? {}
   formError.value = ''
   testOk.value = false
 }
@@ -345,7 +345,6 @@ async function handleSave() {
       base_url: form.value.base_url,
       models: selectedModels.value,
       enabled: true,
-      context_window: form.value.context_window,
     }
     if (isEditing.value) {
       // PUT — only send changed fields
@@ -353,7 +352,6 @@ async function handleSave() {
         label: body.label,
         base_url: body.base_url,
         models: body.models,
-        context_window: body.context_window,
         is_default_provider: form.value.isDefaultProvider,
         default_model: form.value.defaultModel || null,
       }
@@ -582,10 +580,14 @@ onMounted(loadProviders)
   background: #f3f4f6;
   color: #9ca3af;
 }
-
-.card-context-window {
-  font-size: 12px;
-  color: #9ca3af;
+.ctx-badge {
+  font-size: 10px;
+  margin-left: 3px;
+  padding: 0 4px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 3px;
+  font-family: 'SF Mono', 'Consolas', monospace;
 }
 
 /* ── 测试结果 ── */
@@ -654,6 +656,7 @@ onMounted(loadProviders)
 .input:focus { border-color: var(--accent); }
 .input.mono { font-family: 'SF Mono', 'Consolas', monospace; font-size: 13px; }
 select.input { cursor: pointer; }
+.form-hint { font-size: 12px; color: #9ca3af; margin-top: 2px; }
 
 .form-row {
   display: flex;
@@ -670,17 +673,18 @@ select.input { cursor: pointer; }
 .msg.warn { background: #fef3c7; color: #92400e; }
 
 /* ── 默认标记 ── */
-.default-star {
-  font-size: 14px;
+.default-provider-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
 }
 .default-model-tag {
   background: #fef3c7;
   color: #92400e;
 }
-.default-model-star {
-  margin-left: 2px;
-}
-
 /* ── 模型列表 Form ── */
 .model-list {
   display: flex;

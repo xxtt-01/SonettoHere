@@ -1,20 +1,13 @@
 """REST API — 提供商 CRUD 与连接测试。"""
 
-from pathlib import Path
-
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from api.providers import ProviderConfig
-from api.providers.vision import detect_vision_capabilities
+from api.providers.enrich import enrich_provider_config
 from api.dependencies import get_llm
 
 router = APIRouter()
-
-# 视觉能力测试图片路径
-IMAGE_PATH = (
-    Path(__file__).resolve().parent.parent / "data" / "SonettoTest.png"
-)
 
 
 # ── Pydantic 请求/响应模型 ──────────────────────────────
@@ -28,7 +21,6 @@ class ProviderCreateBody(BaseModel):
     base_url: str
     models: list[str] = []
     enabled: bool = True
-    context_window: int = 256_000
 
 
 class ProviderUpdateBody(BaseModel):
@@ -37,7 +29,6 @@ class ProviderUpdateBody(BaseModel):
     base_url: str | None = None
     models: list[str] | None = None
     enabled: bool | None = None
-    context_window: int | None = None
     is_default_provider: bool | None = None
     default_model: str | None = None
 
@@ -97,7 +88,7 @@ def get_provider(provider_id: str, request: Request):
 
 @router.post("/providers")
 async def create_provider(body: ProviderCreateBody, request: Request):
-    """新增提供商，并自动检测每个模型的视觉能力。"""
+    """新增提供商，并自动对模型进行元数据测定与填充。"""
     mgr = _get_manager(request)
     if mgr.get_config(body.id) is not None:
         raise HTTPException(
@@ -112,17 +103,13 @@ async def create_provider(body: ProviderCreateBody, request: Request):
         base_url=body.base_url,
         models=body.models,
         enabled=body.enabled,
-        context_window=body.context_window,
     )
 
-    # 先写入基础配置（不含 vision）
-    mgr.save_config(config)
+    # 并发检测视觉能力和填充上下文窗口
+    await enrich_provider_config(config)
 
-    # 检测视觉能力并更新配置
-    if config.models and IMAGE_PATH.exists():
-        vision = await detect_vision_capabilities(config, IMAGE_PATH)
-        config.model_vision = vision
-        mgr.save_config(config)
+    # 统一写入 YAML（含 model_vision + model_context_windows）
+    mgr.save_config(config)
 
     await _refresh_app_llm(request)
     return config.to_dict()
@@ -130,7 +117,7 @@ async def create_provider(body: ProviderCreateBody, request: Request):
 
 @router.put("/providers/{provider_id}")
 async def update_provider(provider_id: str, body: ProviderUpdateBody, request: Request):
-    """更新提供商配置（部分字段），并重新检测视觉能力。"""
+    """更新提供商配置（部分字段），并重新对模型进行元数据测定与填充。"""
     mgr = _get_manager(request)
     config = mgr.get_config(provider_id)
     if config is None:
@@ -159,14 +146,11 @@ async def update_provider(provider_id: str, body: ProviderUpdateBody, request: R
     for field, value in update_data.items():
         setattr(config, field, value)
 
-    # 先写入更新（不含 vision）
-    mgr.save_config(config)
+    # 并发检测视觉能力和填充上下文窗口
+    await enrich_provider_config(config)
 
-    # 检测视觉能力并更新配置
-    if config.models and IMAGE_PATH.exists():
-        vision = await detect_vision_capabilities(config, IMAGE_PATH)
-        config.model_vision = vision
-        mgr.save_config(config)
+    # 统一写入 YAML（含 model_vision + model_context_windows）
+    mgr.save_config(config)
 
     await _refresh_app_llm(request)
     return config.to_dict()
@@ -236,7 +220,15 @@ async def discover_models(body: TestConnectionBody):
         client = AsyncOpenAI(api_key=body.api_key, base_url=body.base_url)
         models = await client.models.list()
         model_names = sorted(m.id for m in models.data)
-        return {"models": model_names}
+
+        from api.providers.model_context_windows import lookup_context_window
+        model_context_windows: dict[str, int] = {}
+        for m in models.data:
+            ctx = lookup_context_window(m.id)
+            if ctx:
+                model_context_windows[m.id] = ctx
+
+        return {"models": model_names, "model_context_windows": model_context_windows}
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -248,6 +240,7 @@ async def discover_models_for_existing(provider_id: str, request: Request):
     重新拉取后，如果原来的 default_model 已不存在，自动置 None 并返回警告。
     """
     from openai import AsyncOpenAI
+    from api.providers.model_context_windows import lookup_context_window
 
     mgr = _get_manager(request)
     config = mgr.get_config(provider_id)
@@ -259,6 +252,14 @@ async def discover_models_for_existing(provider_id: str, request: Request):
         models = await client.models.list()
         model_names = sorted(m.id for m in models.data)
 
+        # 从 OpenRouter 查找模型上下文窗口
+        model_context_windows: dict[str, int] = {}
+        for m in models.data:
+            ctx = lookup_context_window(m.id)
+            if ctx:
+                model_context_windows[m.id] = ctx
+        config.model_context_windows = model_context_windows
+
         # 默认模型联动：检查 default_model 是否还在新列表中
         warning = None
         if config.default_model is not None and config.default_model not in model_names:
@@ -268,7 +269,7 @@ async def discover_models_for_existing(provider_id: str, request: Request):
         config.models = model_names
         mgr.save_config(config)
 
-        result: dict = {"models": model_names}
+        result: dict = {"models": model_names, "model_context_windows": model_context_windows}
         if warning:
             result["default_model_warning"] = warning
         return result

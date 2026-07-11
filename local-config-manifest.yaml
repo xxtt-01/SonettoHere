@@ -32,7 +32,7 @@ paths:
     gitignored: true
 
   - path: "config/providers.yaml"
-    description: "LLM 提供商配置（base_url / api_key / model / context_window / is_default_provider / default_model）"
+    description: "LLM 提供商配置（base_url / api_key / model / context_window / is_default_provider / default_model / model_context_windows）"
     created_by: "setup.py Step 5 / Web UI /providers 页面"
     source_template: null
     required_for: "对话功能"
