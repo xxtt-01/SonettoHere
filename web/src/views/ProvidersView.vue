@@ -168,6 +168,7 @@ import Icon from '@/components/Icon.vue'
 
 // ── 预设提供商列表 ──
 const presets = [
+  { id: 'openai', label: 'OpenAI Compatible', base_url: '' },
   { id: 'deepseek', label: 'DeepSeek', base_url: 'https://api.deepseek.com' },
   { id: 'qwen', label: 'Qwen', base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
   { id: 'kimi', label: 'Kimi', base_url: 'https://api.moonshot.cn/v1' },
@@ -338,7 +339,7 @@ async function handleSave() {
   try {
     const body: any = {
       id: form.value.id || form.value.label.toLowerCase().replace(/\s+/g, '-'),
-      provider_type: 'openai',
+      provider_type: form.value.provider_type,
       label: form.value.label,
       api_key: form.value.api_key,
       base_url: form.value.base_url,
