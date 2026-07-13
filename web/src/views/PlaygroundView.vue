@@ -781,6 +781,7 @@ function buildMock(name: string, status: ToolStatus): ToolCall {
   const base: ToolCall = {
     kind: 'tool',
     name,
+    toolCallId: '',
     input,
     output: null,
     elapsed: null,

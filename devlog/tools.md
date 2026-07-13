@@ -48,3 +48,12 @@
   - tool_file_search.py: Path.parent 代替 os.path.dirname，Path('.').exists() 恒 True 无需额外 if 检查
 - **影响范围:** 6 个文件，ruff PTH 全项目减少 65 个
 - **测试:** 214 测试全部通过
+
+## 2026-07-10: 交互工具 ask_user 事件增加 tool_call_id
+- **文件:**
+  - `tools/interaction/tool_ask_qa.py`
+  - `tools/interaction/tool_single_choice.py`
+  - `tools/interaction/tool_multi_choice.py`
+- **原因:** Issue #228 — 多同名交互工具并发时前端无法区分，需要唯一工具调用标识
+- **决策:** 每个交互工具的 `_arun` 通过 `interaction.current_tool_call_id.get()` 读取当前工具 `run_id`，在 `ask_user` 事件 payload 中加入 `tool_call_id`
+- **影响范围:** tools/interaction/ 下 3 个文件

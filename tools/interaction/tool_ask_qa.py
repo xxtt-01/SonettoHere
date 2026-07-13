@@ -31,6 +31,7 @@ class AskUserQATool(ToolBase):
             return format_error("question 不能为空")
 
         ws = interaction.current_ws.get()
+        tool_call_id = interaction.current_tool_call_id.get()
 
         interaction_id, future = interaction.register()
 
@@ -39,6 +40,7 @@ class AskUserQATool(ToolBase):
                 "type": "ask_user",
                 "payload": {
                     "tool_name": self.name,
+                    "tool_call_id": tool_call_id,
                     "question": question,
                     "mode": "qa",
                     "options": [],

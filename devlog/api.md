@@ -147,8 +147,12 @@
 - **决策:** 统一遍历 values 后一次性 _pending.clear()
 - **影响范围:** api/interaction.py
 
-## 2026-07-09: path_whitelist PTH 迁移
-- **文件:** `api/routes/path_whitelist.py`
-- **原因:** 消除 ruff PTH 警告，`os.path.normpath` → `Path.resolve`
-- **决策:** `import os` 移除后改为 `str(Path(data["path"]).resolve())`，存储时解析为绝对路径，与运行时 _load_path_whitelist 的 resolve 行为一致
-- **影响范围:** api/routes/path_whitelist.py
+## 2026-07-10: 修复多同名交互工具并发调用 — 后端事件增加 tool_call_id
+- **文件:**
+  - `api/interaction.py`
+  - `api/callbacks/websocket_callback.py`
+- **原因:** Issue #228 — LLM 同时调用多个同名交互工具时，`tool_start`/`tool_end` 缺乏唯一标识，前端无法精确匹配
+- **决策:**
+  - `interaction.py` 新增 `current_tool_call_id` contextvar，传播当前工具的 `run_id`
+  - `websocket_callback.py` 的 `on_tool_start` 设置 contextvar，并在 `tool_start`/`tool_end`/`tool_error` 事件 payload 中加入 `tool_call_id`
+- **影响范围:** api/interaction.py, api/callbacks/websocket_callback.py

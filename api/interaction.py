@@ -19,6 +19,11 @@ auto_approve: contextvars.ContextVar = contextvars.ContextVar(
     "auto_approve", default=False
 )
 
+# 当前正在执行的工具调用 ID（在 WebSocketCallback.on_tool_start 中设置，供 _arun 读取）
+current_tool_call_id: contextvars.ContextVar = contextvars.ContextVar(
+    "current_tool_call_id", default=""
+)
+
 # 全局待处理交互表：interaction_id → Future
 _pending: dict[str, asyncio.Future] = {}
 

@@ -296,10 +296,11 @@ function handleEventForChannel(sid: string, event: ServerEvent) {
     }
 
     case 'tool_start': {
-      console.log(`[useChat] tool_start: "${event.payload.tool_name}"`, { input: event.payload.input, session: sid })
+      console.log(`[useChat] tool_start: "${event.payload.tool_name}"`, { tool_call_id: event.payload.tool_call_id, input: event.payload.input, session: sid })
       turn.events.push({
         kind: 'tool',
         name: event.payload.tool_name,
+        toolCallId: event.payload.tool_call_id || '',
         input: event.payload.input,
         output: null,
         elapsed: null,
@@ -309,7 +310,9 @@ function handleEventForChannel(sid: string, event: ServerEvent) {
     }
 
     case 'tool_end': {
-      const tc = findRunningTool(turn.events, event.payload.tool_name)
+      const tc = event.payload.tool_call_id
+        ? findToolByCallId(turn.events, event.payload.tool_call_id)
+        : undefined
       if (tc) {
         tc.output = event.payload.output
         tc.elapsed = event.payload.elapsed
@@ -321,6 +324,7 @@ function handleEventForChannel(sid: string, event: ServerEvent) {
           }
         }
         console.log(`[useChat] tool_end: "${event.payload.tool_name}"`, {
+          tool_call_id: event.payload.tool_call_id,
           output_len: (event.payload.output || '').length,
           output_preview: (event.payload.output || '').slice(0, 100),
           has_tool_data: !!event.payload.tool_data,
@@ -337,7 +341,9 @@ function handleEventForChannel(sid: string, event: ServerEvent) {
     }
 
     case 'tool_error': {
-      const tc = findRunningTool(turn.events, event.payload.tool_name)
+      const tc = event.payload.tool_call_id
+        ? findToolByCallId(turn.events, event.payload.tool_call_id)
+        : undefined
       if (tc) {
         tc.status = 'error'
       }
@@ -417,14 +423,19 @@ function handleEventForChannel(sid: string, event: ServerEvent) {
       ch._awaitingToolName = ae.payload.tool_name
       console.log('[useChat] received ask_user event:', {
         tool_name: ae.payload.tool_name,
+        tool_call_id: ae.payload.tool_call_id,
         question: ae.payload.question?.slice(0, 50),
         mode: ae.payload.mode,
         interaction_id: ae.payload.interaction_id,
         session: sid,
       })
-      const runningTool = findRunningTool(turn.events, ae.payload.tool_name)
+      // 优先按 tool_call_id 精确匹配，退避到"首个未配对"按名匹配
+      const runningTool = ae.payload.tool_call_id
+        ? findToolByCallId(turn.events, ae.payload.tool_call_id)
+        : findToolWithoutInteraction(turn.events, ae.payload.tool_name)
       console.log('[useChat] findRunningTool result:', runningTool ? {
         name: runningTool.name,
+        toolCallId: runningTool.toolCallId,
         status: runningTool.status,
         has_interaction: !!runningTool.interaction,
       } : 'NOT FOUND')
@@ -643,10 +654,20 @@ function findLastThinking(events: TurnEvent[]): ThinkingBlock | undefined {
   return undefined
 }
 
-function findRunningTool(events: TurnEvent[], toolName: string): ToolCall | undefined {
+function findToolByCallId(events: TurnEvent[], toolCallId: string): ToolCall | undefined {
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i]
-    if (e.kind === 'tool' && e.name === toolName && e.status === 'running') {
+    if (e.kind === 'tool' && (e as ToolCall).toolCallId === toolCallId) {
+      return e as ToolCall
+    }
+  }
+  return undefined
+}
+
+/** 按 tool_name 找第一个尚未关联交互数据的 running 工具（退避策略）。 */
+function findToolWithoutInteraction(events: TurnEvent[], toolName: string): ToolCall | undefined {
+  for (const e of events) {
+    if (e.kind === 'tool' && e.name === toolName && e.status === 'running' && !(e as ToolCall).interaction) {
       return e as ToolCall
     }
   }

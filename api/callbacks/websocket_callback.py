@@ -8,6 +8,7 @@ from fastapi import WebSocket
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 
+from api import interaction
 from .tool_extractors import _dispatch
 
 
@@ -83,11 +84,16 @@ class WebSocketCallback(BaseCallbackHandler):
         self._tool_names[run_id] = tool_name
         self._tool_inputs[run_id] = input_str
 
+        # 设置当前工具调用 ID，供工具 _arun 读取
+        if run_id:
+            interaction.current_tool_call_id.set(run_id)
+
         await self._ws.send_json(
             {
                 "type": "tool_start",
                 "payload": {
                     "tool_name": tool_name,
+                    "tool_call_id": run_id,
                     "input": input_str[:500] if len(input_str) > 500 else input_str,
                 },
             }
@@ -131,6 +137,7 @@ class WebSocketCallback(BaseCallbackHandler):
                 "type": "tool_end",
                 "payload": {
                     "tool_name": tool_name,
+                    "tool_call_id": run_id,
                     "output": out_str,
                     "elapsed": round(elapsed, 2),
                     "tool_data": tool_data,
@@ -148,6 +155,7 @@ class WebSocketCallback(BaseCallbackHandler):
                 "type": "tool_error",
                 "payload": {
                     "tool_name": tool_name,
+                    "tool_call_id": run_id,
                     "error": str(error),
                 },
             }

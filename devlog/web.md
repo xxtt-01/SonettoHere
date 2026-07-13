@@ -55,3 +55,15 @@
 - **原因:** 主 chunk 647KB 过大；vue-tsc 3 个 TS 类型错误
 - **决策:** vite.config.ts 添加 manualChunks 拆出 vendor-vue (105KB)；修复 computed 类型断言
 - **影响范围:** web/
+
+## 2026-07-10: 修复多同名工具前端事件匹配 — 改用 tool_call_id 精确匹配
+- **文件:**
+  - `web/src/types/index.ts`
+  - `web/src/composables/useChat.ts`
+  - `web/src/views/PlaygroundView.vue`
+- **原因:** Issue #228 — `findRunningTool` 按 `tool_name` 匹配同名多实例时总是返回最后一个，导致交互数据挂错到错误的气泡
+- **决策:**
+  - `types/index.ts`: `ToolStartEvent`/`ToolEndEvent`/`ToolErrorEvent`/`AskUserEvent` Payload 增加 `tool_call_id`，`ToolCall` 接口增加 `toolCallId`
+  - `useChat.ts`: `tool_start` 时存储 `toolCallId`；`tool_end`/`tool_error` 改用 `findToolByCallId` 精确匹配；`ask_user` 优先按 `tool_call_id` 匹配，退避到"首个未配对"按名匹配
+  - `PlaygroundView.vue`: mock ToolCall 增加 `toolCallId` 字段
+- **影响范围:** web/src/ 下 3 个文件

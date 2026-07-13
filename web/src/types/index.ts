@@ -19,17 +19,17 @@ export interface ThinkingEndEvent {
 
 export interface ToolStartEvent {
   type: 'tool_start'
-  payload: { tool_name: string; input: string }
+  payload: { tool_name: string; tool_call_id: string; input: string }
 }
 
 export interface ToolEndEvent {
   type: 'tool_end'
-  payload: { tool_name: string; output: string; elapsed: number; tool_data?: Record<string, unknown> }
+  payload: { tool_name: string; tool_call_id: string; output: string; elapsed: number; tool_data?: Record<string, unknown> }
 }
 
 export interface ToolErrorEvent {
   type: 'tool_error'
-  payload: { tool_name: string; error: string }
+  payload: { tool_name: string; tool_call_id: string; error: string }
 }
 
 export interface AnswerEvent {
@@ -62,6 +62,7 @@ export interface AskUserEvent {
   type: 'ask_user'
   payload: {
     tool_name: string
+    tool_call_id: string
     question: string
     mode: 'qa' | 'single_choice' | 'multi_choice' | 'confirm'
     options: string[]
@@ -204,6 +205,7 @@ export interface AskUserInteraction {
 export interface ToolCall {
   kind: 'tool'
   name: string
+  toolCallId: string
   input: string
   output: string | null
   elapsed: number | null
