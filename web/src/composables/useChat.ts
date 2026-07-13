@@ -296,23 +296,25 @@ function handleEventForChannel(sid: string, event: ServerEvent) {
     }
 
     case 'tool_start': {
-      console.log(`[useChat] tool_start: "${event.payload.tool_name}"`, { tool_call_id: event.payload.tool_call_id, input: event.payload.input, session: sid })
+      console.log('[useChat] tool_start:', event.payload.tool_name, { tool_call_id: event.payload.tool_call_id, input: event.payload.input, session: sid })
       turn.events.push({
         kind: 'tool',
         name: event.payload.tool_name,
-        toolCallId: event.payload.tool_call_id || '',
+        toolCallId: event.payload.tool_call_id || event.payload.call_id || '',
         input: event.payload.input,
         output: null,
         elapsed: null,
         status: 'running',
+        callId: tsEvent.payload.call_id,
       })
       break
     }
 
     case 'tool_end': {
-      const tc = event.payload.tool_call_id
-        ? findToolByCallId(turn.events, event.payload.tool_call_id)
-        : undefined
+      // 精确匹配：优先用 tool_call_id，退避到 call_id，降级用 heuristic
+      const tc = (event.payload.tool_call_id ? findToolByCallId(turn.events, event.payload.tool_call_id) : undefined)
+        ?? (event.payload.call_id ? findToolByCallId(turn.events, event.payload.call_id) : undefined)
+        ?? findBestMatchingTool(turn.events, event.payload.tool_name)
       if (tc) {
         tc.output = event.payload.output
         tc.elapsed = event.payload.elapsed
@@ -341,9 +343,9 @@ function handleEventForChannel(sid: string, event: ServerEvent) {
     }
 
     case 'tool_error': {
-      const tc = event.payload.tool_call_id
-        ? findToolByCallId(turn.events, event.payload.tool_call_id)
-        : undefined
+      const tc = (event.payload.tool_call_id ? findToolByCallId(turn.events, event.payload.tool_call_id) : undefined)
+        ?? (event.payload.call_id ? findToolByCallId(turn.events, event.payload.call_id) : undefined)
+        ?? findBestMatchingTool(turn.events, event.payload.tool_name)
       if (tc) {
         tc.status = 'error'
       }
@@ -429,10 +431,9 @@ function handleEventForChannel(sid: string, event: ServerEvent) {
         interaction_id: ae.payload.interaction_id,
         session: sid,
       })
-      // 优先按 tool_call_id 精确匹配，退避到"首个未配对"按名匹配
-      const runningTool = ae.payload.tool_call_id
-        ? findToolByCallId(turn.events, ae.payload.tool_call_id)
-        : findToolWithoutInteraction(turn.events, ae.payload.tool_name)
+      // 优先按 tool_call_id 精确匹配，退避到正向搜索首个无 interaction 的工具
+      const runningTool = (ae.payload.tool_call_id ? findToolByCallId(turn.events, ae.payload.tool_call_id) : undefined)
+        ?? findFirstRunningToolForInteraction(turn.events, ae.payload.tool_name)
       console.log('[useChat] findRunningTool result:', runningTool ? {
         name: runningTool.name,
         toolCallId: runningTool.toolCallId,
@@ -543,6 +544,13 @@ export function useChat(sessionId: Ref<string>) {
 
   function setAutoApprove(val: boolean) {
     activeChannel.value.autoApprove = val
+    const ch = activeChannel.value
+    if (ch.ws && ch.ws.readyState === WebSocket.OPEN) {
+      ch.ws.send(JSON.stringify({
+        type: 'update_auto_approve',
+        payload: { auto_approve: val }
+      }))
+    }
   }
 
   // Session 切换：只确保新 Session 的 WS 连接，不断开旧的
@@ -577,7 +585,7 @@ export function useChat(sessionId: Ref<string>) {
     { immediate: true }
   )
 
-  function send(text: string, refs: ParsedRef[] = [], providerId?: string, modelName?: string) {
+  function send(text: string, refs: ParsedRef[] = [], providerId?: string, modelName?: string, imageRecognition?: boolean, imagePaths?: string[]) {
     const ch = activeChannel.value
     if (!ch.ws || ch.ws.readyState !== WebSocket.OPEN) {
       console.warn(`[useChat:send] WebSocket 未就绪, readyState=${ch.ws?.readyState}, session=${sessionId.value}`)
@@ -593,6 +601,9 @@ export function useChat(sessionId: Ref<string>) {
       id: crypto.randomUUID(),
       userMessage: text,
       refs,
+      imageRefs: imageRecognition && imagePaths?.length
+        ? imagePaths.map(p => ({ type: 'file' as const, path: p, label: p.split(/[/\\]/).pop() || p }))
+        : undefined,
       events: [],
       memoryEvents: [],
       finalAnswer: null,
@@ -601,7 +612,14 @@ export function useChat(sessionId: Ref<string>) {
 
     const payload: ClientMessage = {
       type: 'chat',
-      payload: { message: flatMsg, private: ch.privateMode, auto_approve: ch.autoApprove, provider_id: providerId, model_name: modelName },
+      payload: {
+        message: flatMsg,
+        private: ch.privateMode,
+        auto_approve: ch.autoApprove,
+        provider_id: providerId,
+        model_name: modelName,
+        ...(imageRecognition && imagePaths?.length ? { image_recognition: true, image_refs: imagePaths } : {}),
+      },
     }
     ch.ws.send(JSON.stringify(payload))
   }
@@ -616,6 +634,16 @@ export function useChat(sessionId: Ref<string>) {
   function sendUserResponse(interactionId: string, response: string | string[]) {
     const ch = activeChannel.value
     if (!ch.ws || ch.ws.readyState !== WebSocket.OPEN) return
+    // 标记对应 ToolCall 的 interaction 为已提交，便于 findBestMatchingTool 后续精确匹配
+    const turn = ch.currentTurn
+    if (turn) {
+      for (const ev of turn.events) {
+        if (ev.kind === 'tool' && ev.interaction?.interactionId === interactionId) {
+          ev.interaction.submitted = true
+          break
+        }
+      }
+    }
     const payload: ClientMessage = {
       type: 'user_response',
       payload: { interaction_id: interactionId, response },
@@ -654,7 +682,51 @@ function findLastThinking(events: TurnEvent[]): ThinkingBlock | undefined {
   return undefined
 }
 
-function findToolByCallId(events: TurnEvent[], toolCallId: string): ToolCall | undefined {
+/**
+ * 通过 call_id / toolCallId 精确查找 ToolCall。
+ */
+function findToolByCallId(events: TurnEvent[], id: string): ToolCall | undefined {
+  for (const e of events) {
+    if (e.kind === 'tool' && (e.callId === id || e.toolCallId === id)) {
+      return e as ToolCall
+    }
+  }
+  return undefined
+}
+
+/**
+ * 为 ask_user 事件查找合适的 ToolCall：
+ * 从前往后找第一个 running 且尚未分配 interaction 的工具。
+ */
+function findFirstRunningToolForInteraction(events: TurnEvent[], toolName: string): ToolCall | undefined {
+  for (let i = 0; i < events.length; i++) {
+    const e = events[i]
+    if (e.kind === 'tool' && e.name === toolName && e.status === 'running' && !e.interaction) {
+      return e as ToolCall
+    }
+  }
+  return undefined
+}
+
+/**
+ * 降级匹配：为 tool_end / tool_error 查找匹配的 ToolCall（当 call_id/tool_call_id 匹配失败时使用）。
+ * 1. 优先找 interaction.submitted === true 的工具
+ * 2. 其次找有 interaction 的工具
+ * 3. 最后退化为旧行为：从后往前找最后一个 running 的同名工具
+ */
+function findBestMatchingTool(events: TurnEvent[], toolName: string): ToolCall | undefined {
+  for (let i = 0; i < events.length; i++) {
+    const e = events[i]
+    if (e.kind === 'tool' && e.name === toolName && e.status === 'running' && e.interaction?.submitted) {
+      return e as ToolCall
+    }
+  }
+  for (let i = 0; i < events.length; i++) {
+    const e = events[i]
+    if (e.kind === 'tool' && e.name === toolName && e.status === 'running' && e.interaction) {
+      return e as ToolCall
+    }
+  }
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i]
     if (e.kind === 'tool' && (e as ToolCall).toolCallId === toolCallId) {

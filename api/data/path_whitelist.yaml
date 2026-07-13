@@ -1,0 +1,9 @@
+# 路径白名单（自动生成，首次 import 时创建）
+# 编辑此文件以添加更多允许的路径前缀。
+whitelist:
+- description: 技能目录（自动生成）
+  path: D:\SonettoHere-main\anthropic_skills
+  recursive: true
+- description: 宏目录（自动生成）
+  path: D:\SonettoHere-main\macros
+  recursive: true

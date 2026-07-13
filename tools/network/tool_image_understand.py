@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from zai import ZhipuAiClient
 
 from config.settings import get_settings
-from tools.base import ToolBase, format_error, format_success
+from tools.base import ToolBase, check_path_access, format_error, format_success
 
 MODEL = "glm-5v-turbo"
 
@@ -28,6 +28,10 @@ def _load_image_bytes(image_source: str) -> tuple[bytes, str]:
     """解析 image_source 前缀，返回 (bytes, mime_type)。"""
     if image_source.startswith("local:"):
         path = image_source[6:]
+        # 安全校验：SonettoBlocker + 路径白名单
+        err = check_path_access(path)
+        if err is not None:
+            raise PermissionError(err)
         file_path = Path(path)
         if not file_path.exists():
             raise FileNotFoundError(f"文件不存在: {path}")
@@ -63,6 +67,8 @@ class ImageUnderstandTool(ToolBase):
         "使用智谱 GLM-5V-Turbo 多模态模型理解图片内容。"
         "支持本地文件（local:path）和网络图片（url:https://...）。"
         "可指定 prompt 提问，如 '这张图里有什么文字？'。[调用积极性: 可自由看情况调用] [get_doc: 仅在发生错误时 get_doc]"
+        "【注意】当用户通过图像认知模式发图时，你虽然能直接看到图片内容，但并不知道图片在磁盘上的路径。"
+        "只有在你明确知道需分析图片的路径时才能调用，不可编造路径。"
     )
     args_schema: type[BaseModel] = ImageUnderstandInput
 
@@ -106,3 +112,8 @@ class ImageUnderstandTool(ToolBase):
             )
         except Exception as e:
             return format_error(f"图片理解失败: {e}")
+
+
+# 公共别名 — 供 chat.py 等模块复用图片加载与 MIME 推断逻辑
+load_image_bytes = _load_image_bytes
+get_mime_type = _get_mime_type

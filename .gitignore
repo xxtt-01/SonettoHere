@@ -20,6 +20,10 @@ env/
 # IDE
 .idea/
 .vscode/
+
+# CI / Tools
+.github/
+.trae/
 *.swp
 *.swo
 
@@ -62,20 +66,23 @@ config/personas/memory.yaml
 *.clean
 
 # Provider credentials (明文 API key)
-providers.yaml
+config/providers.yaml
 
 # 路径白名单（自动生成，每用户本地配置）
-api/data/path_whitelist.yaml
+config/path_whitelist.yaml
 
 # SonettoBlocker 拒止锚数据（自动生成，每用户本地配置）
-api/data/sonetto_blocker.yaml
-api/data/SonettoBlocker
+config/sonetto_blocker.yaml
+config/SonettoBlocker
 
 # 认证 Token（自动生成，每用户本地配置）
-api/data/auth_token.yaml
+config/auth_token.yaml
 
 # MCP 服务器配置（每用户本地配置，可能含 API Key 等敏感信息）
 config/mcp_servers.yaml
+
+# 模型上下文窗口用户自定义覆盖（每用户本地配置）
+config/model_context_windows.yaml
 
 # Anthropic Skills（忽略 skill 子目录，保留目录本身用于 .gitkeep）
 anthropic_skills/*/
@@ -85,3 +92,6 @@ macros/*/
 
 # 安全威胁模型（本地文档，不提交）
 dev_docs/security/
+
+# 迁移运行时状态（每个用户本地不同）
+scripts/migrations/.applied

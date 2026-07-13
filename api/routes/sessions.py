@@ -3,8 +3,11 @@
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from agent.prompts import get_system_prompt_parts
+from api.const_session_store import flatten_content
 from api.context_usage import estimate_context_usage
+from api.dependencies import get_llm
+from api.providers import FALLBACK_CTX
+from agent.prompts import get_system_prompt_parts
 
 router = APIRouter()
 
@@ -91,12 +94,12 @@ async def get_context_usage(session_id: str, request: Request):
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
     mgr = getattr(request.app.state, "provider_manager", None)
-    max_tokens = 256_000
+    max_tokens = FALLBACK_CTX
     model_name = ""
     if mgr is not None and mgr.count > 0:
         for provider in mgr.iter_enabled():
-            max_tokens = provider.config.context_window
             model_name = provider.default_model
+            max_tokens = provider.config.model_context_windows.get(model_name, FALLBACK_CTX) if model_name else FALLBACK_CTX
             break
 
     system_prompt = request.app.state.system_prompt
@@ -209,7 +212,7 @@ async def generate_session_title(session_id: str, request: Request):
     conversation_lines = []
     for m in messages:
         role = "user" if m.type == "human" else "assistant"
-        content = (m.content[:600] if hasattr(m, "content") else str(m))[:600]
+        content = flatten_content(getattr(m, "content", None))[:600]
         conversation_lines.append(f"[{role}]\n{content}")
     conversation_text = "\n\n".join(conversation_lines)
 
@@ -231,7 +234,19 @@ async def generate_session_title(session_id: str, request: Request):
     prompt = f"{system_prompt}\n\n对话内容：\n{conversation_text}\n\n标题："
 
     try:
-        llm = request.app.state.llm
+        # 优先通过 provider_manager 动态获取 LLM（支持 Web UI 添加后的热更新）
+        mgr = getattr(request.app.state, "provider_manager", None)
+        if mgr is not None and mgr.count > 0:
+            llm = get_llm(mgr)
+        else:
+            llm = request.app.state.llm
+
+        if llm is None:
+            raise HTTPException(
+                status_code=503,
+                detail="没有可用的 LLM 提供商。请在模型设置中添加并启用一个提供商。",
+            )
+
         response = await llm.ainvoke(prompt)
         title = (
             response.content.strip().strip('"').strip("'")
@@ -241,6 +256,8 @@ async def generate_session_title(session_id: str, request: Request):
         title = title[:50]
         if not title:
             title = "未命名会话"
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"标题生成失败: {e}") from e
 

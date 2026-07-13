@@ -158,6 +158,7 @@
           @click.stop
         >
           <div class="constify-card-title">固定会话</div>
+          <div v-if="constifyError" class="constify-error">{{ constifyError }}</div>
           <div class="constify-input-row">
             <input
               ref="constifyInputRef"
@@ -336,6 +337,7 @@ const constifyInputRef = ref<HTMLInputElement | null>(null)
 const constifyCardTop = ref(0)
 const constifyCardLeft = ref(0)
 const generating = ref(false)
+const constifyError = ref('')
 
 /** 鼠标右键触发时的目标元素 rect，用于定位卡片 */
 let constifyAnchorRect: DOMRect | null = null
@@ -380,6 +382,7 @@ function showConstifyCard(session: SessionInfo) {
   }
   constifyTarget.value = session
   constifyName.value = session.const_name || ''
+  constifyError.value = ''
   closeContextMenu()
   nextTick(() => {
     adjustConstifyCardPosition()
@@ -401,6 +404,7 @@ async function generateTitle() {
     })
   } catch (e) {
     console.error('[constify] 标题生成失败:', e)
+    constifyError.value = e instanceof Error ? e.message : '标题生成失败'
   } finally {
     generating.value = false
   }
@@ -416,6 +420,7 @@ function confirmConstify() {
 function cancelConstify() {
   constifyTarget.value = null
   constifyName.value = ''
+  constifyError.value = ''
 }
 
 // ── 悬浮详情卡片 ──────────────────────────────────────────────
@@ -485,7 +490,7 @@ function closeContextMenu() {
   letter-spacing: 0.5px;
 }
 .sidebar-section-header span {
-  transition: max-width 0.25s ease, opacity 0.2s ease 0.05s, transform 0.25s ease 0.05s, padding 0.25s ease, margin 0.25s ease;
+  transition: opacity 0.2s ease 0.05s, transform 0.25s ease 0.05s;
   overflow: hidden;
   white-space: nowrap;
   display: inline-block;
@@ -557,9 +562,13 @@ function closeContextMenu() {
   box-shadow: var(--shadow);
 }
 
-/* Const 会话外观 */
+/* Const 会话外观 — pin 图标已提供视觉区分，无需侧边条 */
 .session-item.is-const {
-  border-left: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+/* active const sessions should have a clean white bg */
+.session-item.is-const.active {
+  background: var(--bg-card);
 }
 
 .session-item-main {
@@ -567,7 +576,7 @@ function closeContextMenu() {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  transition: max-height 0.25s ease, opacity 0.2s ease 0.05s, transform 0.25s ease 0.05s, padding 0.25s ease, margin 0.25s ease;
+  transition: opacity 0.2s ease 0.05s, transform 0.25s ease 0.05s;
   overflow: hidden;
   max-height: 80px;
 }
@@ -610,7 +619,7 @@ function closeContextMenu() {
   font-size: 16px;
   cursor: pointer;
   opacity: 0;
-  transition: max-width 0.25s ease, opacity 0.15s ease 0.05s, transform 0.25s ease 0.05s, color 0.15s, padding 0.25s ease, margin 0.25s ease;
+  transition: opacity 0.15s ease 0.05s, transform 0.25s ease 0.05s, color 0.15s;
   overflow: hidden;
   max-width: 22px;
 }
@@ -624,7 +633,7 @@ function closeContextMenu() {
   font-size: 12px;
   color: var(--text-secondary);
   padding: 8px;
-  transition: max-height 0.25s ease, opacity 0.2s ease 0.05s, padding 0.25s ease, margin 0.25s ease;
+  transition: opacity 0.2s ease 0.05s;
   overflow: hidden;
   max-height: 40px;
 }
@@ -766,10 +775,8 @@ function closeContextMenu() {
 .constify-card {
   min-width: 240px;
   padding: 16px;
-  background: color-mix(in srgb, var(--bg-card) 75%, transparent);
-  backdrop-filter: blur(14px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
-  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow-xl);
   display: flex;
@@ -782,6 +789,16 @@ function closeContextMenu() {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.constify-error {
+  font-size: 12px;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  padding: 6px 10px;
+  border-radius: 6px;
+  line-height: 1.4;
+  word-break: break-all;
 }
 
 .constify-input-row {

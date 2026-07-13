@@ -19,7 +19,7 @@ from api.health import get_health_report
 from api.middleware.auth import AuthMiddleware
 from api.providers.manager import ProviderManager
 from api.providers.store import ProviderConfigStore
-from api.routes import balance, chat, files, memory, providers, sessions
+from api.routes import balance, chat, files, images, memory, providers, sessions
 from api.routes import env_vars as env_vars_router
 from api.routes import mcp as mcp_router
 from api.routes import news as news_router
@@ -124,6 +124,18 @@ async def lifespan(app: FastAPI):
     app.state.provider_manager = provider_manager
     print(f"[provider] loaded {provider_manager.count} provider(s)")
 
+    # 预加载 OpenRouter 上下文窗口数据，为已配置的模型补充信息
+    from api.providers.model_context_windows import ensure_openrouter_cache, fill_missing_context_windows
+    ensure_openrouter_cache()  # 启动预热
+    total_filled = 0
+    for p in provider_manager.list_configs():
+        filled = await fill_missing_context_windows(p)
+        if filled:
+            provider_manager.save_config(p)
+            total_filled += filled
+    if total_filled:
+        print(f"[context-window] auto-filled {total_filled} model(s) from OpenRouter")
+
     # 2. 其他共享资源（LLM 统一从 ProviderManager 获取）
     try:
         app.state.llm = get_llm(provider_manager)
@@ -198,6 +210,7 @@ def create_app() -> FastAPI:
     app.include_router(sessions.router, prefix="/api")
     app.include_router(memory.router, prefix="/api")
     app.include_router(files.router, prefix="/api")
+    app.include_router(images.router, prefix="/api")
     app.include_router(balance.router, prefix="/api")
 
     # WebSocket 路由（无 /api 前缀）

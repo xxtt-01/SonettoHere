@@ -362,6 +362,7 @@ def _extract_file_search(
             })
         return {
             "operation": "search_files",
+            "search_pattern": data.get("search_pattern", ""),
             "search_directory": directory,
             "total_items": data.get("count", len(items)),
             "items": items,
@@ -462,10 +463,13 @@ def _extract_tarot(
                     "suit": card.get("suit", ""),
                     "element": card.get("element", ""),
                     "keywords": card.get("keywords", []),
+                    "fortune": card.get("fortune", ""),
                     "position": card.get("position", ""),
                     "status": card.get("status", ""),
                     "meaning": card.get("meaning", []),
                     "description": card.get("description", ""),
+                    "symbol": card.get("symbol", ""),
+                    "orientation": card.get("orientation", ""),
                 }
             )
     return {

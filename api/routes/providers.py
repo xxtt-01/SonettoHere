@@ -4,6 +4,8 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from api.providers import ProviderConfig
+from api.providers.enrich import enrich_provider_config
+from api.dependencies import get_llm
 
 router = APIRouter()
 
@@ -19,7 +21,6 @@ class ProviderCreateBody(BaseModel):
     base_url: str
     models: list[str] = []
     enabled: bool = True
-    context_window: int = 256_000
 
 
 class ProviderUpdateBody(BaseModel):
@@ -28,7 +29,8 @@ class ProviderUpdateBody(BaseModel):
     base_url: str | None = None
     models: list[str] | None = None
     enabled: bool | None = None
-    context_window: int | None = None
+    is_default_provider: bool | None = None
+    default_model: str | None = None
 
 
 class TestConnectionBody(BaseModel):
@@ -42,6 +44,27 @@ class TestConnectionBody(BaseModel):
 
 def _get_manager(request: Request):
     return request.app.state.provider_manager
+
+
+async def _refresh_app_llm(request: Request) -> None:
+    """从 provider_manager 刷新 app.state.llm，同步 LTM 消费者生命周期。"""
+    mgr = _get_manager(request)
+    old_llm = getattr(request.app.state, "llm", None)
+    ltm = getattr(request.app.state, "ltm", None)
+
+    try:
+        request.app.state.llm = get_llm(mgr)
+        if old_llm is None and ltm is not None and not ltm.is_listening:
+            ltm.start_listening(
+                request.app.state.llm,
+                ws_registry=request.app.state.ws_registry,
+            )
+            print("[provider] LLM became available \u2014 LTM consumer started")
+    except RuntimeError:
+        request.app.state.llm = None
+        if ltm is not None and ltm.is_listening:
+            await ltm.stop_listening()
+            print("[provider] LLM became unavailable \u2014 LTM consumer stopped")
 
 
 # ── CRUD ────────────────────────────────────────────────
@@ -64,8 +87,8 @@ def get_provider(provider_id: str, request: Request):
 
 
 @router.post("/providers")
-def create_provider(body: ProviderCreateBody, request: Request):
-    """新增提供商。"""
+async def create_provider(body: ProviderCreateBody, request: Request):
+    """新增提供商，并自动对模型进行元数据测定与填充。"""
     mgr = _get_manager(request)
     if mgr.get_config(body.id) is not None:
         raise HTTPException(
@@ -80,33 +103,65 @@ def create_provider(body: ProviderCreateBody, request: Request):
         base_url=body.base_url,
         models=body.models,
         enabled=body.enabled,
-        context_window=body.context_window,
     )
+
+    # 并发检测视觉能力和填充上下文窗口
+    await enrich_provider_config(config)
+
+    # 统一写入 YAML（含 model_vision + model_context_windows）
     mgr.save_config(config)
+
+    await _refresh_app_llm(request)
     return config.to_dict()
 
 
 @router.put("/providers/{provider_id}")
-def update_provider(provider_id: str, body: ProviderUpdateBody, request: Request):
-    """更新提供商配置（部分字段）。"""
+async def update_provider(provider_id: str, body: ProviderUpdateBody, request: Request):
+    """更新提供商配置（部分字段），并重新对模型进行元数据测定与填充。"""
     mgr = _get_manager(request)
     config = mgr.get_config(provider_id)
     if config is None:
         raise HTTPException(status_code=404, detail="Provider not found")
 
     update_data = body.model_dump(exclude_unset=True)
+
+    # 唯一性约束：设置 is_default_provider=True 时清除其他供应商的标记
+    if update_data.get("is_default_provider") is True:
+        all_configs = mgr.list_configs()
+        for other in all_configs:
+            if other.id != provider_id and other.is_default_provider:
+                other.is_default_provider = False
+                mgr.save_config(other)
+
+    # 验证 default_model 在当前 models 列表中
+    if "default_model" in update_data:
+        dm = update_data["default_model"]
+        models = update_data.get("models", config.models)
+        if dm is not None and dm not in models:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Default model '{dm}' is not in the provider's model list",
+            )
+
     for field, value in update_data.items():
         setattr(config, field, value)
 
+    # 并发检测视觉能力和填充上下文窗口
+    await enrich_provider_config(config)
+
+    # 统一写入 YAML（含 model_vision + model_context_windows）
     mgr.save_config(config)
+
+    await _refresh_app_llm(request)
     return config.to_dict()
 
 
 @router.delete("/providers/{provider_id}")
-def delete_provider(provider_id: str, request: Request):
+async def delete_provider(provider_id: str, request: Request):
     """删除提供商配置。"""
     if not _get_manager(request).delete_config(provider_id):
         raise HTTPException(status_code=404, detail="Provider not found")
+    await _refresh_app_llm(request)
     return {"status": "deleted"}
 
 
@@ -165,15 +220,27 @@ async def discover_models(body: TestConnectionBody):
         client = AsyncOpenAI(api_key=body.api_key, base_url=body.base_url)
         models = await client.models.list()
         model_names = sorted(m.id for m in models.data)
-        return {"models": model_names}
+
+        from api.providers.model_context_windows import lookup_context_window
+        model_context_windows: dict[str, int] = {}
+        for m in models.data:
+            ctx = lookup_context_window(m.id)
+            if ctx:
+                model_context_windows[m.id] = ctx
+
+        return {"models": model_names, "model_context_windows": model_context_windows}
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/providers/{provider_id}/discover-models")
 async def discover_models_for_existing(provider_id: str, request: Request):
-    """拉取已保存提供商的模型列表并更新缓存。"""
+    """拉取已保存提供商的模型列表并更新缓存。
+
+    重新拉取后，如果原来的 default_model 已不存在，自动置 None 并返回警告。
+    """
     from openai import AsyncOpenAI
+    from api.providers.model_context_windows import lookup_context_window
 
     mgr = _get_manager(request)
     config = mgr.get_config(provider_id)
@@ -185,9 +252,26 @@ async def discover_models_for_existing(provider_id: str, request: Request):
         models = await client.models.list()
         model_names = sorted(m.id for m in models.data)
 
+        # 从 OpenRouter 查找模型上下文窗口
+        model_context_windows: dict[str, int] = {}
+        for m in models.data:
+            ctx = lookup_context_window(m.id)
+            if ctx:
+                model_context_windows[m.id] = ctx
+        config.model_context_windows = model_context_windows
+
+        # 默认模型联动：检查 default_model 是否还在新列表中
+        warning = None
+        if config.default_model is not None and config.default_model not in model_names:
+            warning = f"Default model '{config.default_model}' is no longer available and has been reset"
+            config.default_model = None
+
         config.models = model_names
         mgr.save_config(config)
 
-        return {"models": model_names}
+        result: dict = {"models": model_names, "model_context_windows": model_context_windows}
+        if warning:
+            result["default_model_warning"] = warning
+        return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

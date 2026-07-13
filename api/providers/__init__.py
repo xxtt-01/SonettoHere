@@ -6,6 +6,8 @@ from typing import Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel
 
+FALLBACK_CTX: int = 128_000
+
 
 @dataclass
 class ProviderConfig:
@@ -18,10 +20,22 @@ class ProviderConfig:
     base_url: str
     models: list[str] = field(default_factory=list)
     enabled: bool = True
-    context_window: int = 256_000
+    model_vision: dict[str, bool] = field(default_factory=dict)
+    is_default_provider: bool = False
+    default_model: str | None = None
+    model_context_windows: dict[str, int] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        d = asdict(self)
+        if not d.get("model_vision"):
+            del d["model_vision"]
+        if d.get("is_default_provider") is None:
+            d.pop("is_default_provider", None)
+        if d.get("default_model") is None:
+            d.pop("default_model", None)
+        if not d.get("model_context_windows"):
+            del d["model_context_windows"]
+        return d
 
 
 @dataclass
@@ -45,6 +59,8 @@ class Provider(ABC):
 
     @property
     def default_model(self) -> str:
+        if self.config.default_model and self.config.default_model in self.config.models:
+            return self.config.default_model
         return self.config.models[0] if self.config.models else ""
 
     @property

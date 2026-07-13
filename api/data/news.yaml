@@ -1,11 +1,107 @@
 news:
+  - id: "v3.1.0-release"
+    title: "发布 v3.1.0 版本"
+    description: "v3.1.0 带来默认供应商与模型选择系统，提供商页新增默认标记与默认模型设定位；升级器重构为迁移 ID 驱动机制，支持更健壮的版本间配置迁移；修复并行工具调用 call_id 匹配和 tool_name 字符串注入漏洞。"
+    type: "feat"
+    date: "2026-07-11"
+    tags: ["发布", "版本"]
+    version: "v3.1.0"
+    pr_number: 0
+  - id: "default-provider-model"
+    title: "默认供应商/模型选择功能"
+    description: "提供商管理新增默认供应商标记，顶栏自动联动展示当前默认模型。编辑表单内可为每个提供商设定默认模型，模型列表中星标直观标识。无缝切换默认模型后顶部栏与上下文用量同步更新。"
+    type: "feat"
+    date: "2026-07-11"
+    tags: ["提供商", "默认", "UI"]
+    version: "v3.1.0"
+    pr_number: 218
+  - id: "upgrade-migration-driven"
+    title: "升级器重构为迁移 ID 驱动"
+    description: "升级器全面重构，采用迁移 ID（migration_id）驱动机制替代版本号对比。每次迁移与对应升级脚本绑定，支持幂等执行、版本跳跃识别和失败回滚提示，配置升级过程更安全透明。"
+    type: "refactor"
+    date: "2026-07-10"
+    tags: ["升级", "重构", "迁移"]
+    version: "v3.1.0"
+    pr_number: 230
+  - id: "v3.0.0-release"
+    title: "发布 v3.0.0 版本"
+    description: "v3.0.0完成了版本迁移的基础设施。Sonetto3的每一个版本都可以通过双击根目录的upgrade.bat升级到GitHub主分支最新版本。那么在明媚歌声的尽头，请别再停留。"
+    type: "feat"
+    date: "2026-07-05"
+    tags: ["发布", "版本", "配置"]
+    version: "v3.0.0"
+    pr_number: 226
+  - id: "minute-precipitation"
+    title: "分钟级降水预报上线"
+    description: "天气工具新增分钟级降水预报展示。后端将 ~120 个降水数据点自动压缩为连续降水区间摘要，携带强度分级和持续时间；前端工具气泡新增降水信息栏，展示时间范围、强度色条和降水量。原始点数据对 LLM 透明，简化理解。"
+    type: "enhance"
+    date: "2026-06-26"
+    tags: ["天气", "降水", "UI"]
+    version: "v2.8.0"
+    pr_number: 196
+  - id: "todoist-bubble-wireframe"
+    title: "Todoist 气泡线框化重构"
+    description: "Todoist 工具气泡全面重构为 6 个独立子组件，全线框黑白配色。包括项目树、任务列表（p1-p4 灰度优先级）、任务详情（2×2 网格信息卡）、操作结果（创建/完成/删除/更新四变体）、分区列表和标签网格，视觉风格统一清晰。"
+    type: "refactor"
+    date: "2026-06-21"
+    tags: ["Todoist", "UI", "重构"]
+    version: "v2.5.0"
+    pr_number: 172
+  - id: "memory-real-time-events"
+    title: "记忆操作实时追踪"
+    description: "后台记忆 consumer 通过 WebSocket 实时推送记忆操作事件到前端，每轮对话底部显示记忆操作日志。新增 MemoryToolCallback 将 CRUD 工具调用转为事件流，turn_id 关联确保事件准确归属对话轮次，无修改时自动显示「记忆检查 — 无需修改」。"
+    type: "feat"
+    date: "2026-06-20"
+    tags: ["记忆", "实时", "WebSocket", "UI"]
+    version: "v2.5.0"
+    pr_number: 166
+  - id: "model-vision-detection"
+    title: "视觉能力自动检测"
+    description: "后端自动检测每个模型的视觉能力，在提供商管理页面和顶部栏直观显示当前模型是否支持多模态输入。无视觉模型时输入框提示闪烁引导用户切换模型，简化多模态体验的发现与配置。"
+    type: "feat"
+    date: "2026-07-02"
+    tags: ["视觉", "多模态", "检测", "UI"]
+    version: "v3.0.0"
+    pr_number: 205
+  - id: "v2.8.0-release"
+    title: "发布 v2.8.0 版本"
+    description: "v2.8.0 版本带来多模态交互升级与语音输入支持。新增图像认知模式，一键切换多模态理解并将图片直接注入 LLM；新增语音输入功能，长按按钮或空格键激活 Web Speech API 语音识别。修复多模态消息在固定会话和标题生成时 base64 图片数据泄入上下文窗口的问题，修复 CodeQL 报告的路径穿越漏洞。"
+    type: "feat"
+    date: "2026-07-01"
+    tags: ["发布", "版本"]
+    version: "v2.8.0"
+    pr_number: 203
+  - id: "voice-input"
+    title: "语音输入功能上线"
+    description: "输入框新增语音输入按钮，长按按钮或长按空格键即可激活 Web Speech API 进行语音识别，识别结果自动填入输入框，释放双手提升输入效率。"
+    type: "feat"
+    date: "2026-06-29"
+    tags: ["语音", "输入", "UI"]
+    version: "v2.8.0"
+    pr_number: 198
+  - id: "image-cognition-button"
+    title: "图像认知按钮上线"
+    description: "输入框新增图像认知按钮，一键切换图像理解模式。用户消息气泡支持图片缩略图展示，后端新增图像 token 估算与缩略图路由，多模态消息处理全面优化。"
+    type: "feat"
+    date: "2026-07-01"
+    tags: ["图像", "多模态", "UI"]
+    version: "v2.8.0"
+    pr_number: 199
+  - id: "auto-approve-mid-turn"
+    title: "工具交互优化"
+    description: "Python 自动执行开关支持对话中途即时生效，无需等待下一轮对话。文件搜索气泡新增搜索表达式的可视化展示。气泡前端字段与后端全面对齐，修复字段不一致问题。"
+    type: "feat"
+    date: "2026-06-28"
+    tags: ["工具", "优化"]
+    version: "v2.7.0"
+    pr_number: 195
   - id: "weather-tool-enhance"
     title: "天气工具优化升级"
     description: "天气卡片全面升级：新增雷电/大风等预警信息显示（等级颜色区分）；详情栏增加 AQI 空气质量、UV 紫外线、云量指标；状况行增加湿度；预报卡片增加日出日落和降水概率。修复更新时间不显示 bug，新增 TypeScript 类型定义。"
     type: "enhance"
     date: "2026-06-27"
     tags: ["天气", "优化"]
-    version: ""
+    version: "v2.7.0"
     pr_number: 186
   - id: "tool-simplify-env-vars"
     title: "工具精简与环境变量管理"
@@ -22,7 +118,7 @@ news:
     date: "2026-06-27"
     tags: ["发布", "版本"]
     version: "v2.7.0"
-    pr_number: 0
+    pr_number: 185
   - id: "mcp-yaml-config"
     title: "MCP YAML 配置化"
     description: "新增 config/mcp_servers.yaml 声明式配置，支持本地 stdio 和远程 SSE/HTTP/WebSocket 四种传输类型，用户仅需编辑 YAML 即可接入 MCP 服务器，无需改代码。内置 POST /api/mcp/reload 热加载端点，工具名自动添加 serverId 前缀，前端统一展示。"
@@ -94,7 +190,7 @@ news:
     date: "2026-06-19"
     tags: ["发布", "版本"]
     version: "v2.2.0"
-    pr_number: 0
+    pr_number: 129
   - id: "chat-input-resize-handle"
     title: "输入框拖拽调整高度"
     description: "ChatInput 文本输入框顶部新增拖拽手柄，hover 时显示蓝色横线。使用 Pointer Events 实现流畅拖拽，容器高度可在默认高度到 600px 之间自由调整，拖拽后高度自动保持不受输入内容影响。"
@@ -118,7 +214,7 @@ news:
     date: "2026-06-16"
     tags: ["发布", "版本"]
     version: "v2.0.0"
-    pr_number: 0
+    pr_number: 114
   - id: "unified-provider-management"
     title: "提供商管理全面升级"
     description: "彻底移除 .env 模型配置，所有 LLM 提供商统一由 providers.yaml 通过前端 UI 管理。ProviderConfig 新增 context_window 字段，前端无提供商时友好提示引导配置。告别 .env 手动修改模型参数。"

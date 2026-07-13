@@ -18,9 +18,11 @@ class ProviderConfigStore:
 
     def __init__(
         self,
-        path: str | Path = "providers.yaml",
+        path: str | Path | None = None,
         mode: Literal["yaml", "sqlite", "memory"] = "yaml",
     ):
+        if path is None:
+            path = Path(__file__).resolve().parent.parent.parent / "config" / "providers.yaml"
         self.path = Path(path)
         self._mode = mode
         self._db_store = None
@@ -39,7 +41,11 @@ class ProviderConfigStore:
             return []
         with self.path.open(encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
-        return [ProviderConfig(**item) for item in raw.get("providers", [])]
+        configs = []
+        for item in raw.get("providers", []):
+            item.pop("context_window", None)  # 旧字段，已移除
+            configs.append(ProviderConfig(**item))
+        return configs
 
     def get(self, provider_id: str) -> ProviderConfig | None:
         if self._db_store is not None:
@@ -105,7 +111,7 @@ class ProviderConfigStore:
             base_url=base_url,
             models=[model_name],
             enabled=True,
-            context_window=int(context_window_str),
+            model_context_windows={model_name: int(context_window_str)},
         )
         self.save(config)
         return config

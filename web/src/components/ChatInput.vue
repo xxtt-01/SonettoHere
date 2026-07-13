@@ -75,6 +75,49 @@
           </div>
           <div v-if="showMenu" class="menu-backdrop" @click="showMenu = false"></div>
           </div>
+          <button
+            class="btn-mic"
+            :class="{ recording: isRecording }"
+            :disabled="disabled"
+            :title="isRecording ? '松开停止录音' : '长按语音输入[SPACE]'"
+            @pointerdown.prevent="onMicPointerDown"
+            @pointerup="onMicPointerUp"
+            @pointerleave="onMicPointerLeave"
+          >
+            <Icon v-if="!isRecording" name="mic" :size="18" />
+            <span v-else class="btn-mic-recording-icon">
+              <span class="rec-bar rec-bar-1"></span>
+              <span class="rec-bar rec-bar-2"></span>
+              <span class="rec-bar rec-bar-3"></span>
+            </span>
+          </button>
+          <button
+            class="btn-image-cog"
+            :class="{ active: imageRecognition, 'flash-denied': flashVisionDenied }"
+            :disabled="disabled"
+            :title="imageCogTitle"
+            @click="handleToggleImageRecognition"
+          >
+            <Icon name="image-cog" :size="18" />
+          </button>
+          <button
+            class="btn-memory"
+            :class="{ active: privateMode }"
+            :disabled="disabled"
+            :title="privateMode ? '私密模式已开启，记忆不会被记录' : '记忆模式，对话将保存到长期记忆'"
+            @click="$emit('togglePrivate')"
+          >
+            <Icon name="memory" :size="18" />
+          </button>
+          <button
+            class="btn-check"
+            :class="{ active: autoApprove }"
+            :disabled="disabled"
+            :title="autoApprove ? '自动执行：Python 代码将直接执行' : '审核模式：代码执行前需确认'"
+            @click="$emit('toggleAutoApprove')"
+          >
+            <Icon name="code" :size="18" />
+          </button>
         </div>
         <div class="input-right-group">
           <div class="dropdown">
@@ -96,6 +139,7 @@
               <button v-for="m in currentModels" :key="m" class="dropdown-option" :class="{ selected: selectedModelName === m }" @click="selectModel(m)">{{ m }}</button>
             </div>
           </div>
+          <span class="input-separator"></span>
           <div class="input-actions">
             <button
               v-if="!isStreaming"
@@ -133,18 +177,25 @@ import AutocompletePanel from '@/components/AutocompletePanel.vue'
 import Icon from '@/components/Icon.vue'
 import type { ProviderConfig, SkillInfo, ToolInfo } from '@/types'
 import type { ParsedRef } from '@/utils/references'
-import { REF_CHIP_CONFIG } from '@/utils/references'
+import { REF_CHIP_CONFIG, filterImageRefs } from '@/utils/references'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps<{
   isStreaming: boolean
   disabled: boolean
+  privateMode: boolean
+  autoApprove: boolean
+  imageRecognition: boolean
+  hasVision?: boolean
 }>()
 
 const emit = defineEmits<{
-  send: [text: string, refs: ParsedRef[], providerId?: string, modelName?: string]
+  send: [text: string, refs: ParsedRef[], providerId?: string, modelName?: string, imageRecognition?: boolean, imagePaths?: string[]]
   stop: []
   modelChange: [providerId: string, modelName: string]
+  togglePrivate: []
+  toggleAutoApprove: []
+  toggleImageRecognition: []
 }>()
 
 const text = ref('')
@@ -192,6 +243,31 @@ function getRefTooltip(r: ParsedRef): string {
 }
 
 defineExpose({ addRef })
+
+// ── 图像认知按钮：无视觉模型时闪烁拒绝 ──
+const flashVisionDenied = ref(false)
+let flashTimer: ReturnType<typeof setTimeout> | null = null
+
+const imageCogTitle = computed(() => {
+  if (props.hasVision === false) {
+    return '当前模型不支持视觉能力，无法使用图像认知'
+  }
+  return '图像认知：开启后随消息发送图片给 LLM（图片引用将转为视觉输入）'
+})
+
+function handleToggleImageRecognition() {
+  if (props.hasVision === false) {
+    // 模型不支持视觉 → 闪烁低饱和度红色提示，不切换
+    flashVisionDenied.value = true
+    if (flashTimer) clearTimeout(flashTimer)
+    flashTimer = setTimeout(() => {
+      flashVisionDenied.value = false
+      flashTimer = null
+    }, 600)
+    return
+  }
+  emit('toggleImageRecognition')
+}
 
 // ── 链接引用 ──
 
@@ -484,7 +560,10 @@ function selectProvider(id: string) {
   openDropdown.value = null
   const p = providers.value.find(p => p.id === id)
   currentModels.value = p?.models ?? []
-  selectedModelName.value = currentModels.value[0] || ''
+  // 优先使用供应商的 default_model，退化到第一个模型
+  selectedModelName.value = (p?.default_model && currentModels.value.includes(p.default_model))
+    ? p.default_model
+    : (currentModels.value[0] || '')
   emit('modelChange', selectedProviderId.value, selectedModelName.value)
 }
 
@@ -500,13 +579,20 @@ function onDocumentClick() {
 onMounted(() => document.addEventListener('click', onDocumentClick))
 onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 
+onMounted(() => document.addEventListener('keydown', onDocumentKeyDown))
+onUnmounted(() => document.removeEventListener('keydown', onDocumentKeyDown))
+
+onMounted(() => document.addEventListener('keyup', onDocumentKeyUp))
+onUnmounted(() => document.removeEventListener('keyup', onDocumentKeyUp))
+
 async function loadProviders() {
   try {
     const res = await api.listProviders()
     providers.value = res.providers.filter(p => p.enabled)
-    // 默认选中第一个已启用的提供商
+    // 默认选中默认供应商，退化到第一个已启用的提供商
     if (providers.value.length > 0 && !selectedProviderId.value) {
-      selectProvider(providers.value[0].id)
+      const defaultP = providers.value.find(p => p.is_default_provider) || providers.value[0]
+      selectProvider(defaultP.id)
     }
   } catch {
     // 静默失败
@@ -574,7 +660,20 @@ function handleSend() {
   const msg = text.value.trim()
   if (!msg || props.disabled) return
 
-  emit('send', msg, refs.value, selectedProviderId.value || undefined, selectedModelName.value || undefined)
+  let sendRefs = refs.value
+  let sendImageRecog = false
+  let imagePaths: string[] | undefined
+
+  if (props.imageRecognition) {
+    const { imageRefs, otherRefs } = filterImageRefs(refs.value)
+    if (imageRefs.length > 0) {
+      imagePaths = imageRefs.map(r => r.path)
+      sendRefs = otherRefs
+      sendImageRecog = true
+    }
+  }
+
+  emit('send', msg, sendRefs, selectedProviderId.value || undefined, selectedModelName.value || undefined, sendImageRecog, imagePaths)
   text.value = ''
   refs.value = []
   nextTick(() => autoResize())
@@ -587,6 +686,154 @@ function autoResize() {
   if (customHeight.value !== null) return
   el.style.height = 'auto'
   el.style.height = Math.min(el.scrollHeight, 160) + 'px'
+}
+
+// ── 语音输入（Web Speech API） ──
+
+const isRecording = ref(false)
+const longPressTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+const recognitionRef = ref<any>(null)
+
+/** 获取 SpeechRecognition 构造器（含厂商前缀） */
+function getSpeechRecognition(): any | null {
+  const w = window as any
+  return w.SpeechRecognition || w.webkitSpeechRecognition || null
+}
+
+function onMicPointerDown() {
+  if (props.disabled) return
+  // 延迟启动，避免轻触误触发
+  longPressTimer.value = setTimeout(() => {
+    startVoiceInput()
+  }, 200)
+}
+
+function onMicPointerUp() {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  if (isRecording.value) {
+    stopVoiceInput()
+  }
+}
+
+function onMicPointerLeave() {
+  // 指针移出按钮但未释放：若尚未开始录音则取消；若正在录音不中断
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+}
+
+// ── 空格键长按语音输入 ──
+
+/** textarea 是否当前焦点元素 */
+function isTextareaFocused(): boolean {
+  return document.activeElement === textareaRef.value
+}
+
+function onDocumentKeyDown(e: KeyboardEvent) {
+  if (e.code !== 'Space' && e.key !== ' ') return
+  if (props.disabled) return
+  // 用户在 textarea 内打字时不拦截空格
+  if (isTextareaFocused()) return
+
+  e.preventDefault()
+  if (longPressTimer.value) return // 防重复
+
+  longPressTimer.value = setTimeout(() => {
+    startVoiceInput()
+  }, 200)
+}
+
+function onDocumentKeyUp(e: KeyboardEvent) {
+  if (e.code !== 'Space' && e.key !== ' ') return
+
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  if (isRecording.value) {
+    stopVoiceInput()
+  }
+}
+
+function startVoiceInput() {
+  const SpeechRecognition = getSpeechRecognition()
+  if (!SpeechRecognition) {
+    console.warn('[ChatInput] 当前浏览器不支持 Web Speech API')
+    // 可选：通过 emit 或 UI 提示
+    return
+  }
+
+  try {
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'zh-CN'
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.maxAlternatives = 1
+
+    recognition.onresult = (event: any) => {
+      let finalTranscript = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript
+        }
+      }
+      if (finalTranscript) {
+        const el = textareaRef.value
+        if (el) {
+          const cursorPos = el.selectionStart
+          text.value =
+            text.value.slice(0, cursorPos) +
+            finalTranscript +
+            text.value.slice(cursorPos)
+          // 光标移到插入文本末尾
+          const newPos = cursorPos + finalTranscript.length
+          nextTick(() => {
+            el.focus()
+            el.selectionStart = el.selectionEnd = newPos
+          })
+        } else {
+          text.value += finalTranscript
+        }
+        autoResize()
+      }
+    }
+
+    recognition.onerror = (event: any) => {
+      console.error('[ChatInput] 语音识别错误:', event.error)
+      if (event.error === 'not-allowed') {
+        // 麦克风权限被拒，显示一下提示
+      }
+      isRecording.value = false
+      recognitionRef.value = null
+    }
+
+    recognition.onend = () => {
+      isRecording.value = false
+      recognitionRef.value = null
+    }
+
+    recognition.start()
+    recognitionRef.value = recognition
+    isRecording.value = true
+  } catch (e) {
+    console.error('[ChatInput] 启动语音识别失败:', e)
+  }
+}
+
+function stopVoiceInput() {
+  if (recognitionRef.value) {
+    try {
+      recognitionRef.value.stop()
+    } catch {
+      // 可能 already ended
+    }
+    recognitionRef.value = null
+  }
+  isRecording.value = false
 }
 
 // ── 拖拽调整输入框高度 ──
@@ -689,6 +936,10 @@ function onResizeEnd(e: PointerEvent) {
   color: var(--status-error);
   opacity: 0.7;
 }
+.dropdown-trigger:focus-visible {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 2px;
+}
 .dropdown-option.disabled {
   color: var(--text-secondary);
   font-style: italic;
@@ -707,8 +958,8 @@ function onResizeEnd(e: PointerEvent) {
   bottom: calc(100% + 4px);
   right: 0;
   z-index: 200;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
   min-width: 140px;
@@ -722,9 +973,9 @@ function onResizeEnd(e: PointerEvent) {
   text-align: left;
   padding: 6px 10px;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   background: transparent;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 12px;
   cursor: pointer;
   font-family: inherit;
@@ -732,12 +983,12 @@ function onResizeEnd(e: PointerEvent) {
   transition: background 0.1s;
 }
 .dropdown-option:hover {
-  background: #f3f4f6;
+  background: var(--bg-secondary);
 }
 .dropdown-option.selected {
-  color: #000000;
+  color: var(--accent);
   font-weight: 600;
-  background: #f9fafb;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
 /* 引用标签条 */
@@ -999,6 +1250,167 @@ function onResizeEnd(e: PointerEvent) {
   to { transform: rotate(360deg); }
 }
 
+/* ── 语音输入按钮 ── */
+.btn-mic {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.btn-mic:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.btn-mic:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.btn-mic.recording {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+/* ── 图像认知按钮 ── */
+.btn-image-cog {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.btn-image-cog:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.btn-image-cog:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.btn-image-cog.active {
+  background: color-mix(in srgb, #81ae92 12%, transparent);
+  color: #81ae92;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #81ae92 30%, transparent);
+}
+
+/* 无视觉模型时闪烁拒绝 */
+.btn-image-cog.flash-denied {
+  background: color-mix(in srgb, #ef4444 18%, transparent);
+  color: #ef4444;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #ef4444 30%, transparent);
+  animation: vision-flash-fade 0.6s ease-out;
+}
+@keyframes vision-flash-fade {
+  0%   { background: color-mix(in srgb, #ef4444 35%, transparent); }
+  100% { background: color-mix(in srgb, #ef4444 0%, transparent); }
+}
+
+/* ── 记忆/私密模式按钮 ── */
+.btn-memory {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.btn-memory:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.btn-memory:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.btn-memory.active {
+  background: color-mix(in srgb, #81ae92 12%, transparent);
+  color: #81ae92;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #81ae92 30%, transparent);
+}
+
+/* ── 检查/自动执行按钮 ── */
+.btn-check {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.btn-check:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.btn-check:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.btn-check.active {
+  background: color-mix(in srgb, #81ae92 12%, transparent);
+  color: #81ae92;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #81ae92 30%, transparent);
+}
+
+.btn-mic-recording-icon {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 18px;
+}
+.rec-bar {
+  display: block;
+  width: 3px;
+  background: currentColor;
+  border-radius: 2px;
+  animation: rec-bar-anim 0.6s ease-in-out infinite alternate;
+}
+.rec-bar-1 { height: 8px; animation-delay: 0s; }
+.rec-bar-2 { height: 14px; animation-delay: 0.15s; }
+.rec-bar-3 { height: 8px; animation-delay: 0.3s; }
+@keyframes rec-bar-anim {
+  from { transform: scaleY(0.5); }
+  to { transform: scaleY(1.2); }
+}
+
 /* 添加文件菜单 */
 .menu-backdrop {
   position: fixed;
@@ -1064,12 +1476,19 @@ function onResizeEnd(e: PointerEvent) {
 .input-left-group {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
 }
 .input-right-group {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.input-separator {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  flex-shrink: 0;
+  opacity: 0.6;
 }
 .input-actions {
   display: flex;
@@ -1104,7 +1523,7 @@ function onResizeEnd(e: PointerEvent) {
   transform: scale(0.95);
 }
 .btn-send:disabled {
-  opacity: 0.3;
+  opacity: 0.2;
   cursor: default;
 }
 .btn-stop {

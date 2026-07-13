@@ -7,12 +7,14 @@ import shutil
 import subprocess
 import sys
 
+from version import __version__
+
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 def header():
     print("=" * 48)
-    print("  SonettoHere v2.0.0 — 首次初始化")
+    print(f"  SonettoHere {__version__} — 首次初始化")
     print("=" * 48)
     print()
     print("本脚本将自动安装依赖并准备好运行环境。")
@@ -134,8 +136,8 @@ def setup_frontend():
 
 
 def setup_env():
-    env_path = os.path.join(PROJECT_ROOT, ".env")
-    example_path = os.path.join(PROJECT_ROOT, ".env.example")
+    env_path = os.path.join(PROJECT_ROOT, "config", ".env")
+    example_path = os.path.join(PROJECT_ROOT, "config", ".env.example")
 
     if os.path.exists(env_path):
         skip(".env 已存在")
@@ -228,7 +230,7 @@ def setup_provider():
         provider_id = "custom-provider"
 
     # 写入 providers.yaml
-    yaml_path = os.path.join(PROJECT_ROOT, "providers.yaml")
+    yaml_path = os.path.join(PROJECT_ROOT, "config", "providers.yaml")
     models_block = "\n".join(f"  - {m}" for m in models)
     entry = f"""- api_key: {api_key}
   base_url: {base_url}
@@ -296,9 +298,9 @@ def setup_persona():
 
 
 def summary():
-    env_path = os.path.join(PROJECT_ROOT, ".env")
+    env_path = os.path.join(PROJECT_ROOT, "config", ".env")
     env_ok = os.path.exists(env_path)
-    prov_path = os.path.join(PROJECT_ROOT, "providers.yaml")
+    prov_path = os.path.join(PROJECT_ROOT, "config", "providers.yaml")
     prov_ok = os.path.exists(prov_path) and os.path.getsize(prov_path) > 20
     print()
     print("=" * 48)

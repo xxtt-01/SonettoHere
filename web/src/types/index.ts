@@ -1,4 +1,4 @@
-import type { ParsedRef } from '@/utils/references'
+import type { FileRef, ParsedRef } from '@/utils/references'
 
 // === WebSocket 服务端 → 客户端事件 ===
 
@@ -19,17 +19,17 @@ export interface ThinkingEndEvent {
 
 export interface ToolStartEvent {
   type: 'tool_start'
-  payload: { tool_name: string; tool_call_id: string; input: string }
+  payload: { call_id: string; tool_call_id: string; tool_name: string; input: string }
 }
 
 export interface ToolEndEvent {
   type: 'tool_end'
-  payload: { tool_name: string; tool_call_id: string; output: string; elapsed: number; tool_data?: Record<string, unknown> }
+  payload: { call_id: string; tool_call_id: string; tool_name: string; output: string; elapsed: number; tool_data?: Record<string, unknown> }
 }
 
 export interface ToolErrorEvent {
   type: 'tool_error'
-  payload: { tool_name: string; tool_call_id: string; error: string }
+  payload: { call_id: string; tool_call_id: string; tool_name: string; error: string }
 }
 
 export interface AnswerEvent {
@@ -159,6 +159,10 @@ export interface ChatMessage {
     auto_approve?: boolean
     provider_id?: string
     model_name?: string
+    /** 图像认知模式：图片 ref 被移除，后端 base64 编码后注入上下文 */
+    image_recognition?: boolean
+    /** 图像认知模式下的图片文件绝对路径列表 */
+    image_refs?: string[]
   }
 }
 
@@ -181,7 +185,15 @@ export interface UserResponseMessage {
   }
 }
 
-export type ClientMessage = ChatMessage | CancelMessage | PingMessage | UserResponseMessage
+/** 会话中途更新 auto_approve 设置 */
+export interface UpdateAutoApproveMessage {
+  type: 'update_auto_approve'
+  payload: {
+    auto_approve: boolean
+  }
+}
+
+export type ClientMessage = ChatMessage | CancelMessage | PingMessage | UserResponseMessage | UpdateAutoApproveMessage
 
 // === 前端 UI 状态类型 ===
 
@@ -210,6 +222,7 @@ export interface ToolCall {
   output: string | null
   elapsed: number | null
   status: 'running' | 'done' | 'error'
+  callId?: string
   toolData?: Record<string, unknown>
   /** ask_user 交互工具的额外数据 */
   interaction?: AskUserInteraction
@@ -231,6 +244,8 @@ export interface ChatTurn {
   id: string
   userMessage: string
   refs: ParsedRef[]
+  /** 图像认知模式下发送的图片引用（用于 UI 展示） */
+  imageRefs?: FileRef[]
   events: TurnEvent[]
   memoryEvents?: MemoryToolEvent[]
   finalAnswer: string | null
@@ -375,7 +390,10 @@ export interface ProviderConfig {
   base_url: string
   models: string[]
   enabled: boolean
-  context_window?: number
+  model_vision?: Record<string, boolean>
+  is_default_provider?: boolean
+  default_model?: string | null
+  model_context_windows?: Record<string, number>
 }
 
 export interface ListProvidersResponse {
@@ -390,6 +408,8 @@ export interface TestConnectionResponse {
 
 export interface DiscoverModelsResponse {
   models: string[]
+  default_model_warning?: string
+  model_context_windows?: Record<string, number>
 }
 
 // === 系统更新动态 ===

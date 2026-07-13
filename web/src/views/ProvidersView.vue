@@ -19,6 +19,7 @@
           <div class="card-header">
             <div class="card-title-row">
               <span class="card-label">{{ p.label }}</span>
+              <span v-if="p.is_default_provider" class="default-provider-badge">默认</span>
               <span class="card-type-badge">OPENAI</span>
             </div>
             <button
@@ -36,14 +37,11 @@
           <div class="card-models-section">
             <div class="card-models-title">模型（{{ p.models.length }}）</div>
             <div class="card-models-tags">
-              <span v-for="m in p.models" :key="m" class="model-tag">{{ m }}</span>
+              <span v-for="m in p.models" :key="m" class="model-tag" :class="{ 'default-model-tag': m === p.default_model }">
+                {{ m }}<span v-if="p.model_context_windows?.[m]" class="ctx-badge">{{ fmtCtx(p.model_context_windows[m]) }}</span><Icon v-if="p.model_vision?.[m] === true" name="image-cog" :size="12" class="vision-dot" title="支持视觉" />
+              </span>
               <span v-if="p.models.length === 0" class="model-tag empty">未配置</span>
             </div>
-          </div>
-
-          <!-- 上下文窗口 -->
-          <div class="card-context-window">
-            上下文窗口: {{ (p.context_window ?? 256000).toLocaleString() }} tokens
           </div>
 
           <!-- 测试结果 -->
@@ -91,9 +89,12 @@
         <input v-model="form.base_url" class="input mono" placeholder="https://api.deepseek.com" />
       </div>
 
-      <div class="form-section">
-        <label class="form-label">Context Window (tokens)</label>
-        <input v-model.number="form.context_window" class="input mono" type="number" placeholder="256000" />
+      <!-- 默认供应商 -->
+      <div v-if="isEditing" class="form-section">
+        <label class="form-label checkbox-label">
+          <input type="checkbox" v-model="form.isDefaultProvider" />
+          设为默认供应商
+        </label>
       </div>
 
       <!-- 测试 & 拉取模型 -->
@@ -108,14 +109,31 @@
       <div v-if="formError" class="msg error">{{ formError }}</div>
       <div v-if="testOk" class="msg ok">连接成功 ({{ testLatency }}ms)</div>
 
+      <!-- 默认模型警告 -->
+      <div v-if="defaultModelWarning" class="msg warn">{{ defaultModelWarning }}</div>
+
       <!-- 模型列表 -->
       <div v-if="discoveredModels.length > 0" class="form-section">
         <label class="form-label">选择模型（{{ selectedModels.length }}/{{ discoveredModels.length }}）</label>
         <div class="model-list">
-          <label v-for="m in discoveredModels" :key="m" class="model-item">
-            <input type="checkbox" :value="m" :checked="selectedModels.includes(m)" @change="toggleModel(m)" />
-            {{ m }}
-          </label>
+          <div v-for="m in discoveredModels" :key="m" class="model-item" :class="{ 'default-model-item': form.defaultModel === m }">
+            <label class="model-checkbox-label">
+              <input type="checkbox" :value="m" :checked="selectedModels.includes(m)" @change="toggleModel(m)" />
+              <span class="model-name-text">{{ m }}<span v-if="modelContextWindows[m]" class="ctx-badge">{{ fmtCtx(modelContextWindows[m]) }}</span></span>
+              <span v-if="editingModelVision[m] === true" class="vision-badge">视觉</span>
+              <span v-else-if="editingModelVision[m] === false" class="vision-badge no-vision">无视觉</span>
+            </label>
+            <div class="model-actions">
+              <button
+                type="button"
+                class="btn-set-default"
+                :class="{ active: form.defaultModel === m }"
+                :disabled="!selectedModels.includes(m)"
+                @click.stop="form.defaultModel = m"
+                :title="form.defaultModel === m ? '当前默认模型' : '设为默认模型'"
+              >{{ form.defaultModel === m ? '⭐' : '☆' }}</button>
+            </div>
+          </div>
         </div>
         <button type="button" class="btn sm" @click="selectAllModels">全选</button>
         <button type="button" class="btn sm" @click="selectedModels = []">取消全选</button>
@@ -134,10 +152,12 @@
 <script setup lang="ts">
 import { api } from '@/api'
 import type { ProviderConfig, TestConnectionResponse } from '@/types'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import Icon from '@/components/Icon.vue'
 
 // ── 预设提供商列表 ──
 const presets = [
+  { id: 'openai', label: 'OpenAI Compatible', base_url: '' },
   { id: 'deepseek', label: 'DeepSeek', base_url: 'https://api.deepseek.com' },
   { id: 'qwen', label: 'Qwen', base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
   { id: 'kimi', label: 'Kimi', base_url: 'https://api.moonshot.cn/v1' },
@@ -153,9 +173,10 @@ const providers = ref<ProviderConfig[]>([])
 const loading = ref(false)
 
 // ── 表单 ──
-const form = ref({ id: '', provider_type: 'deepseek', label: '', api_key: '', base_url: '', context_window: 256000 })
+const form = ref({ id: '', provider_type: 'deepseek', label: '', api_key: '', base_url: '', isDefaultProvider: false, defaultModel: null as string | null })
 const isEditing = computed(() => mode.value === 'edit')
 const editingId = ref('')
+const defaultModelWarning = ref('')
 
 function presetBaseUrl(id: string) {
   return presets.find(p => p.id === id)?.base_url || ''
@@ -168,8 +189,13 @@ function onPresetChange(newType: string) {
   }
 }
 // watch provider_type
-import { watch } from 'vue'
 watch(() => form.value.provider_type, onPresetChange)
+
+// ── 上下文窗口格式化 ──
+function fmtCtx(ctx: number): string {
+  if (ctx >= 1_000_000) return (ctx / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M'
+  return Math.round(ctx / 1000).toLocaleString() + 'K'
+}
 
 // ── 测试连接 ──
 const testing = ref(false)
@@ -204,14 +230,26 @@ const discovering = ref(false)
 const discoveredModels = ref<string[]>([])
 const selectedModels = ref<string[]>([])
 
+// ── 视觉能力 ──
+const editingModelVision = ref<Record<string, boolean>>({})
+
+// ── 上下文窗口（拉取后缓存） ──
+const modelContextWindows = ref<Record<string, number>>({})
+
 async function handleDiscover() {
   discovering.value = true
   formError.value = ''
+  defaultModelWarning.value = ''
   try {
     if (isEditing.value && !form.value.api_key) {
       const res = await api.discoverModelsForExisting(editingId.value)
       discoveredModels.value = res.models
       selectedModels.value = [...res.models]
+      modelContextWindows.value = res.model_context_windows ?? {}
+      if (res.default_model_warning) {
+        defaultModelWarning.value = res.default_model_warning
+        form.value.defaultModel = null
+      }
     } else {
       const res = await api.discoverModels({
         api_key: form.value.api_key,
@@ -219,6 +257,7 @@ async function handleDiscover() {
       })
       discoveredModels.value = res.models
       selectedModels.value = [...res.models]
+      modelContextWindows.value = res.model_context_windows ?? {}
     }
   } catch (e: any) {
     formError.value = e.message
@@ -229,7 +268,10 @@ async function handleDiscover() {
 
 function toggleModel(m: string) {
   const idx = selectedModels.value.indexOf(m)
-  if (idx >= 0) selectedModels.value.splice(idx, 1)
+  if (idx >= 0) {
+    selectedModels.value.splice(idx, 1)
+    if (form.value.defaultModel === m) form.value.defaultModel = null
+  }
   else selectedModels.value.push(m)
 }
 
@@ -255,9 +297,12 @@ async function loadProviders() {
 
 function startAdd() {
   mode.value = 'add'
-  form.value = { id: '', provider_type: 'deepseek', label: '', api_key: '', base_url: presetBaseUrl('deepseek'), context_window: 256000 }
+  form.value = { id: '', provider_type: 'deepseek', label: '', api_key: '', base_url: presetBaseUrl('deepseek'), isDefaultProvider: false, defaultModel: null }
   discoveredModels.value = []
   selectedModels.value = []
+  editingModelVision.value = {}
+  defaultModelWarning.value = ''
+  modelContextWindows.value = {}
   formError.value = ''
   testOk.value = false
 }
@@ -271,10 +316,14 @@ function startEdit(p: ProviderConfig) {
     label: p.label,
     api_key: '',
     base_url: p.base_url,
-    context_window: p.context_window ?? 256000,
+    isDefaultProvider: p.is_default_provider ?? false,
+    defaultModel: p.default_model ?? null,
   }
   discoveredModels.value = [...p.models]
   selectedModels.value = [...p.models]
+  editingModelVision.value = p.model_vision ?? {}
+  defaultModelWarning.value = ''
+  modelContextWindows.value = p.model_context_windows ?? {}
   formError.value = ''
   testOk.value = false
 }
@@ -290,17 +339,22 @@ async function handleSave() {
   try {
     const body: any = {
       id: form.value.id || form.value.label.toLowerCase().replace(/\s+/g, '-'),
-      provider_type: 'openai',
+      provider_type: form.value.provider_type,
       label: form.value.label,
       api_key: form.value.api_key,
       base_url: form.value.base_url,
       models: selectedModels.value,
       enabled: true,
-      context_window: form.value.context_window,
     }
     if (isEditing.value) {
       // PUT — only send changed fields
-      const updateBody: any = { label: body.label, base_url: body.base_url, models: body.models, context_window: body.context_window }
+      const updateBody: any = {
+        label: body.label,
+        base_url: body.base_url,
+        models: body.models,
+        is_default_provider: form.value.isDefaultProvider,
+        default_model: form.value.defaultModel || null,
+      }
       if (form.value.api_key) updateBody.api_key = form.value.api_key
       await api.updateProvider(editingId.value, updateBody)
     } else {
@@ -509,10 +563,31 @@ onMounted(loadProviders)
   color: #d1d5db;
   font-family: inherit;
 }
-
-.card-context-window {
-  font-size: 12px;
+.vision-dot {
+  margin-left: 2px;
+  opacity: 0.6;
+  vertical-align: middle;
+}
+.vision-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  background: #d1fae5;
+  color: #065f46;
+}
+.vision-badge.no-vision {
+  background: #f3f4f6;
   color: #9ca3af;
+}
+.ctx-badge {
+  font-size: 10px;
+  margin-left: 3px;
+  padding: 0 4px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 3px;
+  font-family: 'SF Mono', 'Consolas', monospace;
 }
 
 /* ── 测试结果 ── */
@@ -581,6 +656,7 @@ onMounted(loadProviders)
 .input:focus { border-color: var(--accent); }
 .input.mono { font-family: 'SF Mono', 'Consolas', monospace; font-size: 13px; }
 select.input { cursor: pointer; }
+.form-hint { font-size: 12px; color: #9ca3af; margin-top: 2px; }
 
 .form-row {
   display: flex;
@@ -594,26 +670,93 @@ select.input { cursor: pointer; }
 }
 .msg.ok { background: #d1fae5; color: #065f46; }
 .msg.error { background: #fee2e2; color: #991b1b; }
+.msg.warn { background: #fef3c7; color: #92400e; }
 
+/* ── 默认标记 ── */
+.default-provider-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+}
+.default-model-tag {
+  background: #fef3c7;
+  color: #92400e;
+}
+/* ── 模型列表 Form ── */
 .model-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-height: 240px;
+  gap: 2px;
+  max-height: 300px;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px;
 }
 .model-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  border-radius: 4px;
   font-size: 13px;
   font-family: 'SF Mono', 'Consolas', monospace;
-  padding: 4px 6px;
-  cursor: pointer;
-  border-radius: 4px;
 }
 .model-item:hover { background: var(--bg-secondary); }
-.model-item input { margin-right: 8px; }
+.default-model-item {
+  background: #fffbeb;
+}
+.model-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+.model-checkbox-label input { margin: 0; flex-shrink: 0; }
+.model-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.model-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.btn-set-default {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.btn-set-default:hover,
+.btn-set-default.active {
+  opacity: 1;
+}
+.btn-set-default:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.checkbox-label input {
+  margin: 0;
+}
 
 .form-actions {
   display: flex;

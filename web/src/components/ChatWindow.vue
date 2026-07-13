@@ -14,7 +14,7 @@
           :data-user-msg-idx="turnsIndex(mergedIdx)"
           @contextmenu.prevent="onBubbleContextMenu($event, 'user_message', turn.userMessage, '用户', turnsIndex(mergedIdx))"
         >
-          <MessageBubble role="user" :content="turn.userMessage" :refs="turn.refs" />
+          <MessageBubble role="user" :content="turn.userMessage" :refs="turn.refs" :image-refs="turn.imageRefs" />
         </div>
         <!-- 助手侧：events + finalAnswer + 记忆日志，hover 时才显示记忆日志 -->
         <div class="assistant-side">
@@ -426,10 +426,7 @@ function closeContextMenu() {
   font-size: 42px;
   font-weight: 700;
   letter-spacing: -0.5px;
-  background: linear-gradient(135deg, #000000 40%, #555555 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent);
 }
 .empty-desc {
   font-size: 20px;

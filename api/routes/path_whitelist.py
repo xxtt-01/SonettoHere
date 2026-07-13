@@ -13,8 +13,7 @@ router = APIRouter()
 
 WHITELIST_PATH = (
     Path(__file__).resolve().parent.parent.parent
-    / "api"
-    / "data"
+    / "config"
     / "path_whitelist.yaml"
 )
 
