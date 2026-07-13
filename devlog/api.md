@@ -163,3 +163,12 @@
 - **根因:** 上次修改只改了 `on_tool_error` 和 `tool_end` 正常路径，漏掉了 `on_tool_end` 内部的 `format_error` 提前返回分支
 - **决策:** 在 `format_error → tool_error` 分支的 payload 中补上 `tool_call_id`
 - **影响范围:** api/callbacks/websocket_callback.py
+
+## 2026-07-13: Provider SQLite 适配上游 model_context_windows
+- **文件:**
+  - `api/database/provider_store.py`
+  - `api/database/migrations/002_create_providers.py`
+  - `api/database/migrations/004_change_context_window.py`
+- **原因:** 合并上游后 ProviderConfig 的 context_window 字段改为 model_context_windows (dict), SQLite 层未同步导致测试失败
+- **决策:** context_window INTEGER 列改为 model_context_windows TEXT(JSON)；新增迁移 004 兼容现有数据库；load_all/get 增加旧数据兼容逻辑
+- **影响范围:** api/database/provider_store.py, api/database/migrations/

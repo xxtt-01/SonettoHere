@@ -305,7 +305,7 @@ function handleEventForChannel(sid: string, event: ServerEvent) {
         output: null,
         elapsed: null,
         status: 'running',
-        callId: tsEvent.payload.call_id,
+        callId: event.payload.call_id,
       })
       break
     }
@@ -727,19 +727,10 @@ function findBestMatchingTool(events: TurnEvent[], toolName: string): ToolCall |
       return e as ToolCall
     }
   }
+  // 第三遍（降级）：旧行为——从后往前找最后一个 running 的同名工具
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i]
-    if (e.kind === 'tool' && (e as ToolCall).toolCallId === toolCallId) {
-      return e as ToolCall
-    }
-  }
-  return undefined
-}
-
-/** 按 tool_name 找第一个尚未关联交互数据的 running 工具（退避策略）。 */
-function findToolWithoutInteraction(events: TurnEvent[], toolName: string): ToolCall | undefined {
-  for (const e of events) {
-    if (e.kind === 'tool' && e.name === toolName && e.status === 'running' && !(e as ToolCall).interaction) {
+    if (e.kind === 'tool' && e.name === toolName && e.status === 'running') {
       return e as ToolCall
     }
   }

@@ -67,3 +67,11 @@
   - `useChat.ts`: `tool_start` 时存储 `toolCallId`；`tool_end`/`tool_error` 改用 `findToolByCallId` 精确匹配；`ask_user` 优先按 `tool_call_id` 匹配，退避到"首个未配对"按名匹配
   - `PlaygroundView.vue`: mock ToolCall 增加 `toolCallId` 字段
 - **影响范围:** web/src/ 下 3 个文件
+
+## 2026-07-13: 合并上游 #229 工具匹配逻辑，整合双方 call_id 方案
+- **文件:**
+  - `web/src/composables/useChat.ts`
+  - `web/src/types/index.ts`
+- **原因:** 合并上游 35 commit 时 #229 与本地 tool_call_id 方案冲突，需要整合
+- **决策:** 后端同时发送 call_id + tool_call_id；types 定义双字段；前端匹配级联：tool_call_id → call_id → findBestMatchingTool（三趟降级）；ask_user 改用 findFirstRunningToolForInteraction（正向搜索首个无 interaction 的工具）
+- **影响范围:** web/src/composables/useChat.ts, web/src/types/index.ts

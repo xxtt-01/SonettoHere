@@ -12,7 +12,7 @@ class DatabaseProviderStore:
 
     _UPSERT_SQL = """
         INSERT INTO providers (id, provider_type, label, api_key, base_url,
-           models_json, enabled, context_window, updated_at)
+           models_json, enabled, model_context_windows, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET
            provider_type=excluded.provider_type,
@@ -21,7 +21,7 @@ class DatabaseProviderStore:
            base_url=excluded.base_url,
            models_json=excluded.models_json,
            enabled=excluded.enabled,
-           context_window=excluded.context_window,
+           model_context_windows=excluded.model_context_windows,
            updated_at=excluded.updated_at
     """
 
@@ -37,6 +37,10 @@ class DatabaseProviderStore:
             d.pop("created_at", None)
             d.pop("updated_at", None)
             d["enabled"] = bool(d["enabled"])
+            # 兼容旧数据：旧版 context_window 字段已废弃
+            d.pop("context_window", None)
+            if isinstance(d.get("model_context_windows"), str):
+                d["model_context_windows"] = json.loads(d["model_context_windows"])
             result.append(ProviderConfig(**d))
         return result
 
@@ -52,6 +56,9 @@ class DatabaseProviderStore:
         d.pop("created_at", None)
         d.pop("updated_at", None)
         d["enabled"] = bool(d["enabled"])
+        d.pop("context_window", None)
+        if isinstance(d.get("model_context_windows"), str):
+            d["model_context_windows"] = json.loads(d["model_context_windows"])
         return ProviderConfig(**d)
 
     def _upsert(self, conn, config: ProviderConfig) -> None:
@@ -66,7 +73,7 @@ class DatabaseProviderStore:
                 config.base_url,
                 json.dumps(config.models),
                 int(config.enabled),
-                config.context_window,
+                json.dumps(config.model_context_windows),
                 time.time(),
             ),
         )

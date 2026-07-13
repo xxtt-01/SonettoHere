@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS providers (
     base_url TEXT NOT NULL DEFAULT '',
     models_json TEXT NOT NULL DEFAULT '[]',
     enabled INTEGER NOT NULL DEFAULT 1,
-    context_window INTEGER NOT NULL DEFAULT 256000,
+    model_context_windows TEXT NOT NULL DEFAULT '{}',
     created_at REAL NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at REAL NOT NULL DEFAULT (strftime('%s', 'now'))
 );
