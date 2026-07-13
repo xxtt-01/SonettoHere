@@ -117,6 +117,7 @@ class WebSocketCallback(BaseCallbackHandler):
                         "type": "tool_error",
                         "payload": {
                             "tool_name": tool_name,
+                            "tool_call_id": run_id,
                             "error": error_msg,
                         },
                     }

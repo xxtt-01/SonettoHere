@@ -156,3 +156,10 @@
   - `interaction.py` 新增 `current_tool_call_id` contextvar，传播当前工具的 `run_id`
   - `websocket_callback.py` 的 `on_tool_start` 设置 contextvar，并在 `tool_start`/`tool_end`/`tool_error` 事件 payload 中加入 `tool_call_id`
 - **影响范围:** api/interaction.py, api/callbacks/websocket_callback.py
+
+## 2026-07-10: 修复 on_tool_end 中 format_error 分支缺 tool_call_id
+- **文件:** `api/callbacks/websocket_callback.py`
+- **原因:** 自我审查发现 — `on_tool_end` 中检测到 `format_error` 响应时发送的 `tool_error` 事件遗漏了 `tool_call_id`，前端的精确匹配会退避到名称匹配
+- **根因:** 上次修改只改了 `on_tool_error` 和 `tool_end` 正常路径，漏掉了 `on_tool_end` 内部的 `format_error` 提前返回分支
+- **决策:** 在 `format_error → tool_error` 分支的 payload 中补上 `tool_call_id`
+- **影响范围:** api/callbacks/websocket_callback.py
