@@ -172,3 +172,11 @@
 - **原因:** 合并上游后 ProviderConfig 的 context_window 字段改为 model_context_windows (dict), SQLite 层未同步导致测试失败
 - **决策:** context_window INTEGER 列改为 model_context_windows TEXT(JSON)；新增迁移 004 兼容现有数据库；load_all/get 增加旧数据兼容逻辑
 - **影响范围:** api/database/provider_store.py, api/database/migrations/
+
+## 2026-07-13: 合并后清理 — 移除未使用 import + import 排序
+- **文件:**
+  - `api/callbacks/websocket_callback.py`
+  - `api/routes/chat.py`
+- **原因:** 合并上游后 ruff 检查发现 chat.py 有未使用的 get_mime_type import；websocket_callback.py import 块未排序
+- **决策:** 修复 ruff F401/I001 告警
+- **影响范围:** api/routes/chat.py, api/callbacks/websocket_callback.py
